@@ -100,14 +100,28 @@
                 <span id="lorentz-factor-spacetime" class="font-bold text-yellow-400">1.00</span>
             </div>
 
+            <div class="flex items-center justify-center space-x-4 mt-6 mb-4">
+                <span class="text-lg font-medium">View Frame:</span>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="spacetime-frame" value="stationary" checked class="form-radio h-5 w-5 text-purple-600">
+                    <span class="ml-2 text-gray-200">Stationary (x-ct)</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="spacetime-frame" value="moving" class="form-radio h-5 w-5 text-purple-600">
+                    <span class="ml-2 text-gray-200">Moving (x'-ct')</span>
+                </label>
+            </div>
+
             <div id="spacetime-canvas-container" class="mt-8">
                 <!-- p5.js canvas will be injected here -->
             </div>
             <p class="note">
-                *The blue axes (t', x') represent the coordinate system of the moving observer, which will appear sheared (non-orthogonal) for velocities greater than zero.*
-                *The grey lines are simultaneity lines for the stationary observer.*
-                *The green lines are simultaneity lines for the moving observer.*
-                *The orange lines are lines of constant position for the moving observer.*
+                *In the Stationary (x-ct) frame, the grey axes are orthogonal, and the blue axes shear.*<br>
+                *In the Moving (x'-ct') frame, the blue axes are orthogonal, and the grey axes shear.*<br>
+                *The highlighted blue line is the worldline of the moving observer.*
+                *The green lines are simultaneity lines for the currently selected moving frame (x' or x).*
+                *The orange lines are lines of constant position for the currently selected moving frame (x' or x).*
+                *The vertical green line (at x=1 or x'=1) represents a point stationary in its own frame.*
             </p>
         </div>
 

@@ -106,8 +106,10 @@ const velocitySpacetimeInput = document.getElementById('velocity-spacetime');
 const velocitySpacetimeDisplay = document.getElementById('velocity-spacetime-display');
 const lorentzFactorSpacetimeDisplay = document.getElementById('lorentz-factor-spacetime');
 const spacetimeCanvasContainer = document.getElementById('spacetime-canvas-container');
+const frameRadios = document.querySelectorAll('input[name="spacetime-frame"]');
 
 let currentSpacetimeVelocity = 0; // Velocity for the moving observer
+let activeFrame = 'stationary'; // 'stationary' or 'moving'
 let s; // Variable to hold the p5.js instance
 
 /**
@@ -144,11 +146,11 @@ const sketch = function(sketch) {
         sketch.background(40, 40, 60); // Dark background
 
         // Update velocity and Lorentz factor display
-        const v = parseFloat(velocitySpacetimeInput.value);
-        const gamma = calculateLorentzFactor(v);
-        currentSpacetimeVelocity = v;
+        const v_input = parseFloat(velocitySpacetimeInput.value);
+        currentSpacetimeVelocity = v_input;
+        const gamma = calculateLorentzFactor(currentSpacetimeVelocity);
 
-        velocitySpacetimeDisplay.textContent = `${v.toFixed(3)}c`;
+        velocitySpacetimeDisplay.textContent = `${currentSpacetimeVelocity.toFixed(3)}c`;
         lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
 
         sketch.push();
@@ -159,25 +161,7 @@ const sketch = function(sketch) {
         let canvas_half_height = sketch.height / 2;
         let extend_line_factor = 2; // Factor to extend lines beyond canvas for clipping by p5.js
 
-        // --- Draw stationary (grey) axes (ct and x) ---
-        sketch.stroke(200); // Light grey for stationary axes
-        sketch.strokeWeight(1.5);
-        sketch.line(-canvas_half_width, 0, canvas_half_width, 0); // x-axis
-        sketch.line(0, -canvas_half_height, 0, canvas_half_height); // ct-axis
-
-        // --- Draw grid lines for stationary observer ---
-        sketch.stroke(100); // Darker grey for grid
-        sketch.strokeWeight(0.5);
-        // Vertical lines (constant x)
-        for (let x_grid = -4; x_grid <= 4; x_grid++) {
-            sketch.line(x_grid * scaleFactor, -canvas_half_height, x_grid * scaleFactor, canvas_half_height);
-        }
-        // Horizontal lines (constant t)
-        for (let t_grid = -4; t_grid <= 4; t_grid++) {
-            sketch.line(-canvas_half_width, t_grid * scaleFactor, canvas_half_width, t_grid * scaleFactor);
-        }
-
-        // --- Draw light cone (ct = +/- x) ---
+        // --- Draw light cone (ct = +/- x) - always the same ---
         sketch.stroke(255, 255, 0, 150); // Yellow, semi-transparent
         sketch.strokeWeight(2);
         // Lines extending to canvas edges
@@ -191,77 +175,182 @@ const sketch = function(sketch) {
         sketch.triangle(0, 0, -cone_extent, cone_extent, cone_extent, cone_extent); // Past light cone
 
 
-        // --- Draw moving (blue) axes (ct' and x') ---
-        sketch.stroke(100, 150, 255); // Blue for moving axes
+        let axis1_color, axis2_color; // Colors for primary and secondary axes/grids
+        let axis1_label, axis2_label; // Labels for primary and secondary axes
+        let axis1_slope, axis2_slope; // Slopes for the secondary axes relative to primary
+        let grid1_color, grid2_color; // Colors for primary and secondary grids
+
+        let current_v_for_drawing; // Velocity to use for slope calculations
+
+        if (activeFrame === 'stationary') {
+            // Stationary frame is primary (orthogonal)
+            axis1_color = 200; // Grey for stationary
+            grid1_color = 100;
+            axis1_label = ['ct', 'x'];
+
+            axis2_color = sketch.color(100, 150, 255); // Blue for moving
+            grid2_color = sketch.color(50, 180, 50, 100); // Green for simultaneity
+            grid3_color = sketch.color(255, 165, 0, 100); // Orange for constant position
+
+            current_v_for_drawing = currentSpacetimeVelocity; // Use actual velocity for shear
+            axis2_slope = current_v_for_drawing; // slope of x' axis in ct vs x is v
+            axis1_slope = 1 / current_v_for_drawing; // slope of ct' axis in ct vs x is 1/v
+        } else { // activeFrame === 'moving'
+            // Moving frame is primary (orthogonal)
+            axis1_color = sketch.color(100, 150, 255); // Blue for moving (now orthogonal)
+            grid1_color = sketch.color(50, 150, 200, 100); // Lighter blue for its grid
+            axis1_label = ["ct'", "x'"];
+
+            axis2_color = 200; // Grey for stationary (now sheared)
+            grid2_color = sketch.color(100, 100, 100, 100); // Darker grey for simultaneity
+            grid3_color = sketch.color(150, 100, 50, 100); // Darker orange for constant position
+
+            current_v_for_drawing = -currentSpacetimeVelocity; // Inverse velocity for shear
+            axis2_slope = current_v_for_drawing; // slope of x axis in ct' vs x' is -v
+            axis1_slope = 1 / current_v_for_drawing; // slope of ct axis in ct' vs x' is -1/v
+        }
+
+        // --- Draw primary (orthogonal) axes (ct and x or ct' and x') ---
+        sketch.stroke(axis1_color);
+        sketch.strokeWeight(1.5);
+        sketch.line(-canvas_half_width, 0, canvas_half_width, 0); // x or x' axis
+        sketch.line(0, -canvas_half_height, 0, canvas_half_height); // ct or ct' axis
+
+        // --- Draw primary (orthogonal) grid lines ---
+        sketch.stroke(grid1_color);
+        sketch.strokeWeight(0.5);
+        for (let i = -4; i <= 4; i++) {
+            sketch.line(i * scaleFactor, -canvas_half_height, i * scaleFactor, canvas_half_height); // Vertical lines
+            sketch.line(-canvas_half_width, i * scaleFactor, canvas_half_width, i * scaleFactor); // Horizontal lines
+        }
+
+        // --- Draw secondary (sheared) axes (ct' and x' or ct and x) ---
+        sketch.stroke(axis2_color);
         sketch.strokeWeight(1.5);
 
-        // x' axis (line ct = v*x, slope = v)
-        let x_prime_slope = currentSpacetimeVelocity;
-        let x_prime_line_x1 = -canvas_half_width * extend_line_factor;
-        let x_prime_line_y1 = x_prime_line_x1 * x_prime_slope;
-        let x_prime_line_x2 = canvas_half_width * extend_line_factor;
-        let x_prime_line_y2 = x_prime_line_x2 * x_prime_slope;
-        sketch.line(x_prime_line_x1, x_prime_line_y1, x_prime_line_x2, x_prime_line_y2);
+        // x' or x axis (line ct = v*x, slope = v)
+        let x_sec_line_x1 = -canvas_half_width * extend_line_factor;
+        let x_sec_line_y1 = x_sec_line_x1 * axis2_slope;
+        let x_sec_line_x2 = canvas_half_width * extend_line_factor;
+        let x_sec_line_y2 = x_sec_line_x2 * axis2_slope;
+        sketch.line(x_sec_line_x1, x_sec_line_y1, x_sec_line_x2, x_sec_line_y2);
 
-
-        // ct' axis (line x = v*ct, or ct = (1/v)*x, slope = 1/v)
-        if (currentSpacetimeVelocity === 0) {
+        // ct' or ct axis (line x = v*ct, or ct = (1/v)*x, slope = 1/v)
+        if (current_v_for_drawing === 0) {
             // Vertical line when v=0
             sketch.line(0, -canvas_half_height * extend_line_factor, 0, canvas_half_height * extend_line_factor);
         } else {
-            let ct_prime_slope = 1 / currentSpacetimeVelocity;
-            let ct_prime_line_x1 = -canvas_half_width * extend_line_factor;
-            let ct_prime_line_y1 = ct_prime_line_x1 * ct_prime_slope;
-            let ct_prime_line_x2 = canvas_half_width * extend_line_factor;
-            let ct_prime_line_y2 = ct_prime_line_x2 * ct_prime_slope;
-            sketch.line(ct_prime_line_x1, ct_prime_line_y1, ct_prime_line_x2, ct_prime_line_y2);
+            let ct_sec_slope = axis1_slope;
+            let ct_sec_line_x1 = -canvas_half_width * extend_line_factor;
+            let ct_sec_line_y1 = ct_sec_line_x1 * ct_sec_slope;
+            let ct_sec_line_x2 = canvas_half_width * extend_line_factor;
+            let ct_sec_line_y2 = ct_sec_line_x2 * ct_sec_slope;
+            sketch.line(ct_sec_line_x1, ct_sec_line_y1, ct_sec_line_x2, ct_sec_line_y2);
         }
 
-        // --- Draw a stationary object's world line (vertical line at x=constant) ---
-        // Example: World line of an object stationary at x=1 in stationary frame
+        // --- Worldline for the Moving Observer (highlighted ct' axis) ---
+        // This is always the ct' axis of the "real" moving frame.
+        // If activeFrame is 'stationary', it's the blue ct' axis.
+        // If activeFrame is 'moving', it's the now-orthogonal blue ct' axis.
+        sketch.stroke(70, 180, 255); // Slightly different blue for emphasis
+        sketch.strokeWeight(3); // Thicker line
+
+        if (activeFrame === 'stationary') {
+            // It's the sheared blue axis with slope 1/v_input
+            if (currentSpacetimeVelocity === 0) {
+                sketch.line(0, -canvas_half_height * extend_line_factor, 0, canvas_half_height * extend_line_factor);
+            } else {
+                let ct_prime_slope = 1 / currentSpacetimeVelocity;
+                let line_x1 = -canvas_half_width * extend_line_factor;
+                let line_y1 = line_x1 * ct_prime_slope;
+                let line_x2 = canvas_half_width * extend_line_factor;
+                let line_y2 = line_x2 * ct_prime_slope;
+                sketch.line(line_x1, line_y1, line_x2, line_y2);
+            }
+        } else { // activeFrame === 'moving'
+            // It's the orthogonal ct' axis (which is now the canvas's y-axis)
+            sketch.line(0, -canvas_half_height * extend_line_factor, 0, canvas_half_height * extend_line_factor);
+        }
+
+
+        // --- Draw a stationary object's world line (vertical line in its own rest frame) ---
+        // This object is at x=1 in the original stationary frame.
+        // If activeFrame is 'stationary', it's a vertical green line at x=1.
+        // If activeFrame is 'moving', its worldline appears sheared with slope 1/(-v_input)
         sketch.stroke(0, 200, 0, 200); // Green
         sketch.strokeWeight(2);
-        sketch.line(1 * scaleFactor, -canvas_half_height, 1 * scaleFactor, canvas_half_height); // World line for x=1
-        sketch.ellipse(1 * scaleFactor, 0, 10, 10); // Event at (x=1, ct=0)
 
-        // --- Draw grid lines for moving observer (simultaneity and constant position lines) ---
-        // Simultaneity lines (lines parallel to x' axis)
-        // These have slope 'v' (in ct vs x plot). Equation: ct = v*x + K
-        sketch.stroke(50, 180, 50, 100); // Green for moving observer's simultaneity lines
+        if (activeFrame === 'stationary') {
+            sketch.line(1 * scaleFactor, -canvas_half_height, 1 * scaleFactor, canvas_half_height); // World line for x=1
+            sketch.ellipse(1 * scaleFactor, 0, 10, 10); // Event at (x=1, ct=0)
+        } else { // activeFrame === 'moving'
+            // In moving frame, this object is moving at -v. Its worldline has slope 1/(-v)
+            if (currentSpacetimeVelocity === 0) { // If v=0, it's vertical at x'=1
+                sketch.line(1 * scaleFactor, -canvas_half_height, 1 * scaleFactor, canvas_half_height);
+                sketch.ellipse(1 * scaleFactor, 0, 10, 10);
+            } else {
+                let obj_slope = 1 / (-currentSpacetimeVelocity);
+                let x_prime_at_ct0 = (1 / gamma) * scaleFactor; // x' when ct=0, x=1
+                
+                let line_x1 = -canvas_half_width * extend_line_factor;
+                let line_y1 = obj_slope * (line_x1 - x_prime_at_ct0);
+                let line_x2 = canvas_half_width * extend_line_factor;
+                let line_y2 = obj_slope * (line_x2 - x_prime_at_ct0);
+                sketch.line(line_x1, line_y1, line_x2, line_y2);
+                sketch.ellipse(x_prime_at_ct0, 0, 10, 10); // Event at (x'=transformed, ct'=0)
+            }
+        }
+
+        // --- Draw grid lines for secondary (sheared) frame ---
+        // Simultaneity lines (lines parallel to x' or x axis with slope 'v' or '-v')
+        // Equation: ct = slope * x + K
+        sketch.stroke(grid2_color);
         sketch.strokeWeight(0.7);
-        for (let t_prime_coord = -4; t_prime_coord <= 4; t_prime_coord++) {
-            // K (ct-intercept when x=0) for a given t' is t_prime_coord / gamma
-            // From t' = gamma(t - vx) => t = vx + t'/gamma
-            let K_for_t_prime = (t_prime_coord / gamma) * scaleFactor;
-            
+        for (let coord = -4; coord <= 4; coord++) {
+            let K_val; // Intercept on the primary time axis
+            if (activeFrame === 'stationary') { // lines of constant t'
+                // t' = gamma(t - vx) => t = vx + t'/gamma
+                K_val = (coord / gamma) * scaleFactor;
+            } else { // lines of constant t
+                // t = gamma(t' + vx') => t' = -vx' + t/gamma
+                K_val = (coord / gamma) * scaleFactor;
+            }
+
             let grid_line_x1 = -canvas_half_width * extend_line_factor;
-            let grid_line_y1 = x_prime_slope * grid_line_x1 + K_for_t_prime;
+            let grid_line_y1 = axis2_slope * grid_line_x1 + K_val;
             let grid_line_x2 = canvas_half_width * extend_line_factor;
-            let grid_line_y2 = x_prime_slope * grid_line_x2 + K_for_t_prime;
+            let grid_line_y2 = axis2_slope * grid_line_x2 + K_val;
             sketch.line(grid_line_x1, grid_line_y1, grid_line_x2, grid_line_y2);
         }
 
-        // Constant position lines (lines parallel to ct' axis)
-        // These have slope '1/v' (in ct vs x plot). Equation: ct = (1/v)*x + K_x
-        sketch.stroke(255, 165, 0, 100); // Orange for moving observer's constant position lines
+        // Constant position lines (lines parallel to ct' or ct axis with slope '1/v' or '-1/v')
+        // Equation: ct = slope * x + K_x
+        sketch.stroke(grid3_color);
         sketch.strokeWeight(0.7);
-        for (let x_prime_coord = -4; x_prime_coord <= 4; x_prime_coord++) {
-            if (currentSpacetimeVelocity === 0) {
-                // Vertical lines when v=0 (x = constant)
-                let x_pos = x_prime_coord * scaleFactor; // x' coords are just x coords at v=0
-                sketch.line(x_pos, -canvas_half_height * extend_line_factor, x_pos, canvas_half_height * extend_line_factor);
-            } else {
-                // K_x (ct-intercept when x=0) for a given x' is -(x_prime_coord / (v * gamma))
-                // From x' = gamma(x - vt) => t = (1/v)x - x'/(v*gamma)
-                let K_x_for_x_prime = -(x_prime_coord / (currentSpacetimeVelocity * gamma)) * scaleFactor;
-                
-                let ct_prime_slope = 1 / currentSpacetimeVelocity;
-                let grid_line_x1 = -canvas_half_width * extend_line_factor;
-                let grid_line_y1 = ct_prime_slope * grid_line_x1 + K_x_for_x_prime;
-                let grid_line_x2 = canvas_half_width * extend_line_factor;
-                let grid_line_y2 = ct_prime_slope * grid_line_x2 + K_x_for_x_prime;
-                sketch.line(grid_line_x1, grid_line_y1, grid_line_x2, grid_line_y2);
+        for (let coord = -4; coord <= 4; coord++) {
+            let K_x_val; // Intercept on the primary time axis when x=0
+            if (activeFrame === 'stationary') { // lines of constant x'
+                // x' = gamma(x - vt) => t = (1/v)x - x'/(v*gamma)
+                if (current_v_for_drawing === 0) { // vertical lines
+                    sketch.line(coord * scaleFactor, -canvas_half_height * extend_line_factor, coord * scaleFactor, canvas_half_height * extend_line_factor);
+                    continue;
+                }
+                K_x_val = -(coord / (current_v_for_drawing * gamma)) * scaleFactor;
+            } else { // lines of constant x
+                // x = gamma(x' + vt') => t' = -(1/v)x' + x/(v*gamma)
+                if (current_v_for_drawing === 0) { // vertical lines
+                     sketch.line(coord * scaleFactor, -canvas_half_height * extend_line_factor, coord * scaleFactor, canvas_half_height * extend_line_factor);
+                     continue;
+                }
+                K_x_val = -(coord / (current_v_for_drawing * gamma)) * scaleFactor;
             }
+
+            let ct_sec_slope = axis1_slope;
+            let grid_line_x1 = -canvas_half_width * extend_line_factor;
+            let grid_line_y1 = ct_sec_slope * grid_line_x1 + K_x_val;
+            let grid_line_x2 = canvas_half_width * extend_line_factor;
+            let grid_line_y2 = ct_sec_slope * grid_line_x2 + K_x_val;
+            sketch.line(grid_line_x1, grid_line_y1, grid_line_x2, grid_line_y2);
         }
 
 
@@ -271,37 +360,43 @@ const sketch = function(sketch) {
         sketch.scale(1, -1); // Flip Y-axis back for text drawing (standard text orientation)
         sketch.textSize(16);
 
-        // Labels for stationary axes
-        sketch.text('ct', 0, -canvas_half_height + 20); // ct-axis label (top)
-        sketch.text('x', canvas_half_width - 20, 0); // x-axis label (right)
+        // Labels for primary (orthogonal) axes
+        sketch.text(axis1_label[0], 0, -canvas_half_height + 20); // Time axis label (top)
+        sketch.text(axis1_label[1], canvas_half_width - 20, 0); // Space axis label (right)
 
-        // Labels for moving axes (ct', x')
-        sketch.fill(100, 150, 255); // Blue for moving axis labels
+        // Labels for secondary (sheared) axes
+        sketch.fill(axis2_color); // Use the secondary axis color for its labels
         let label_offset_from_origin = scaleFactor * 3.5; // Distance from origin for label placement
 
-        // x' axis label: Positioned along the x' axis, then rotated to align
-        // The angle for x' axis is atan(v) relative to the x-axis.
-        let x_prime_angle_for_label = sketch.atan(currentSpacetimeVelocity);
+        // x' or x axis label (secondary)
+        let x_sec_angle_for_label = sketch.atan(axis2_slope);
         sketch.push();
-        sketch.translate(label_offset_from_origin * sketch.cos(x_prime_angle_for_label),
-                         label_offset_from_origin * sketch.sin(x_prime_angle_for_label));
-        sketch.rotate(x_prime_angle_for_label); // Rotate text to align with the axis
-        sketch.text("x'", 0, 0);
+        sketch.translate(label_offset_from_origin * sketch.cos(x_sec_angle_for_label),
+                         label_offset_from_origin * sketch.sin(x_sec_angle_for_label));
+        sketch.rotate(x_sec_angle_for_label); // Rotate text to align with the axis
+        if (activeFrame === 'stationary') {
+             sketch.text("x'", 0, 0);
+        } else {
+             sketch.text("x", 0, 0);
+        }
         sketch.pop();
 
-        // ct' axis label: Positioned along the ct' axis, then rotated to align
-        // The angle for ct' axis is atan(1/v) relative to the x-axis.
-        let ct_prime_angle_for_label;
-        if (currentSpacetimeVelocity === 0) {
-            ct_prime_angle_for_label = 90; // Exactly vertical when v=0
+        // ct' or ct axis label (secondary)
+        let ct_sec_angle_for_label;
+        if (current_v_for_drawing === 0) {
+            ct_sec_angle_for_label = 90; // Exactly vertical when v=0
         } else {
-            ct_prime_angle_for_label = sketch.atan(1 / currentSpacetimeVelocity);
+            ct_sec_angle_for_label = sketch.atan(axis1_slope);
         }
         sketch.push();
-        sketch.translate(label_offset_from_origin * sketch.cos(ct_prime_angle_for_label),
-                         label_offset_from_origin * sketch.sin(ct_prime_angle_for_label));
-        sketch.rotate(ct_prime_angle_for_label); // Rotate text to align with the axis
-        sketch.text("ct'", 0, 0);
+        sketch.translate(label_offset_from_origin * sketch.cos(ct_sec_angle_for_label),
+                         label_offset_from_origin * sketch.sin(ct_sec_angle_for_label));
+        sketch.rotate(ct_sec_angle_for_label); // Rotate text to align with the axis
+        if (activeFrame === 'stationary') {
+             sketch.text("ct'", 0, 0);
+        } else {
+             sketch.text("ct", 0, 0);
+        }
         sketch.pop();
 
         sketch.pop(); // End of transformed coordinates
@@ -318,12 +413,24 @@ window.addEventListener('resize', () => {
      }
 });
 
-// Trigger an initial update for the spacetime diagram slider
+// Event listener for velocity slider
 velocitySpacetimeInput.addEventListener('input', () => {
+    // No direct function call needed here for p5.js as it continuously draws in sketch.draw()
+    // The `sketch.draw` function reads `currentSpacetimeVelocity` and updates
+    // the display elements each frame.
     const v = parseFloat(velocitySpacetimeInput.value);
     const gamma = calculateLorentzFactor(v);
     velocitySpacetimeDisplay.textContent = `${v.toFixed(3)}c`;
     lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
+});
+
+// Event listener for frame radio buttons
+frameRadios.forEach(radio => {
+    radio.addEventListener('change', (event) => {
+        activeFrame = event.target.value;
+        // Redraw the canvas to apply the new frame
+        s.redraw(); // Request p5.js to redraw immediately
+    });
 });
 
 // Initial update for spacetime diagram display
