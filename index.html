@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Relativity Visualizer</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- p5.js library for Spacetime Diagram -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <!-- Link to your custom CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-4xl font-extrabold text-center mb-6 glow-text">Special Relativity Visualizer</h1>
+        <p class="text-center text-lg text-gray-300 mb-8">
+            Explore the fascinating effects of special relativity: how time and space change with velocity.
+        </p>
+
+        <!-- Time Dilation Section -->
+        <div id="time-dilation-sim" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">⏱️ Time Dilation</h2>
+            <p class="text-gray-200 mb-4">
+                Observe how a clock moving at high speeds appears to tick slower relative to a stationary observer.
+            </p>
+            <div class="slider-group">
+                <label for="velocity-time" class="text-lg font-medium">Velocity (v/c):</label>
+                <input type="range" id="velocity-time" min="0" max="0.999" step="0.001" value="0">
+                <span id="velocity-time-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
+            </div>
+
+            <div class="display-box mt-4">
+                <span>Lorentz Factor ($\gamma$):</span>
+                <span id="lorentz-factor-time" class="font-bold text-yellow-400">1.00</span>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center justify-around space-y-6 md:space-y-0 md:space-x-8 mt-8">
+                <div class="clock stationary-clock">
+                    <p class="text-gray-100 text-sm">Stationary Clock ($\Delta t_0$)</p>
+                    <p id="stationary-time" class="text-4xl font-bold text-white mt-2">00.00</p>
+                    <p class="text-xs text-gray-300">seconds</p>
+                </div>
+                <div class="clock moving-clock">
+                    <p class="text-gray-100 text-sm">Moving Clock ($\Delta t$)</p>
+                    <p id="moving-time" class="text-4xl font-bold text-white mt-2">00.00</p>
+                    <p class="text-xs text-gray-300">seconds</p>
+                </div>
+            </div>
+            <p class="note">
+                *The moving clock's time shown is what a stationary observer would measure for it.*
+            </p>
+        </div>
+
+        <!-- Length Contraction Section -->
+        <div id="length-contraction-sim" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">📏 Length Contraction</h2>
+            <p class="text-gray-200 mb-4">
+                See how the length of an object moving at high speeds appears to shrink in its direction of motion.
+            </p>
+            <div class="slider-group">
+                <label for="velocity-length" class="text-lg font-medium">Velocity (v/c):</label>
+                <input type="range" id="velocity-length" min="0" max="0.999" step="0.001" value="0">
+                <span id="velocity-length-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
+            </div>
+
+            <div class="display-box mt-4">
+                <span>Lorentz Factor ($\gamma$):</span>
+                <span id="lorentz-factor-length" class="font-bold text-yellow-400">1.00</span>
+            </div>
+
+            <div class="ruler-container mt-8">
+                <p class="text-gray-100 mb-2">Original Length ($L_0$): <span class="font-bold">100 units</span></p>
+                <div class="ruler original-ruler">
+                    Original Object
+                </div>
+                <p class="text-gray-100 mt-4 mb-2">Contracted Length ($L$): <span id="contracted-length-display" class="font-bold">100.00 units</span></p>
+                <div class="ruler contracted-ruler">
+                    Moving Object (contracted)
+                </div>
+            </div>
+            <p class="note">
+                *The length shown is what a stationary observer would measure for the moving object.*
+            </p>
+        </div>
+
+        <!-- Spacetime Diagram Section -->
+        <div id="spacetime-diagram-sim" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">🌌 Spacetime Diagram (Minkowski)</h2>
+            <p class="text-gray-200 mb-4">
+                Visualize events in spacetime and see how different observers (moving at velocity 'v') perceive coordinates. The time axis (ct) points upwards, and the space axis (x) points rightwards. The light cone represents the path of light.
+            </p>
+            <div class="slider-group">
+                <label for="velocity-spacetime" class="text-lg font-medium">Observer Velocity (v/c):</label>
+                <input type="range" id="velocity-spacetime" min="0" max="0.95" step="0.005" value="0">
+                <span id="velocity-spacetime-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
+            </div>
+            <div class="display-box mt-4">
+                <span>Lorentz Factor ($\gamma$):</span>
+                <span id="lorentz-factor-spacetime" class="font-bold text-yellow-400">1.00</span>
+            </div>
+
+            <div id="spacetime-canvas-container" class="mt-8">
+                <!-- p5.js canvas will be injected here -->
+            </div>
+            <p class="note">
+                *The blue axes (t', x') represent the coordinate system of the moving observer.*
+                *The grey lines are simultaneity lines for the stationary observer.*
+                *The green lines are simultaneity lines for the moving observer.*
+                *The orange lines are lines of constant position for the moving observer.*
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Link to your custom JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>

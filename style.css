@@ -1,0 +1,182 @@
+/* Custom CSS for 'Inter' font and base styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(to bottom right, #311B92, #6A1B9A); /* Equivalent to from-indigo-900 to-purple-900 */
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.container {
+    background-color: #2D3748; /* Equivalent to gray-800 */
+    padding: 2rem;
+    border-radius: 0.75rem; /* rounded-xl */
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-2xl */
+    max-width: 56rem; /* max-w-4xl */
+    width: 100%;
+    margin-bottom: 2rem; /* Add some margin at the bottom */
+    margin-top: 2rem; /* Add some margin at the top */
+    display: flex;
+    flex-direction: column;
+    gap: 2rem; /* space-y-8 */
+}
+.simulation-section {
+    background-color: #4A5568; /* Equivalent to gray-700 */
+    padding: 1.5rem;
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* space-y-4 */
+}
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem; /* space-y-2 */
+}
+@media (min-width: 768px) { /* md breakpoint */
+    .slider-group {
+        flex-direction: row;
+        gap: 1rem; /* space-x-4 */
+    }
+    .slider-group > label {
+        flex-shrink: 0; /* Prevent label from shrinking */
+    }
+}
+input[type="range"] {
+    width: 100%;
+    height: 0.75rem; /* h-3 */
+    background-color: #4A5568; /* gray-600 */
+    border-radius: 0.5rem; /* rounded-lg */
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.5rem; /* w-6 */
+    height: 1.5rem; /* h-6 */
+    background-color: #8B5CF6; /* purple-500 */
+    border-radius: 9999px; /* rounded-full */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+    border: 2px solid #C4B5FD; /* border-2 border-purple-300 */
+    margin-top: -0.375rem; /* Adjust to center thumb vertically */
+}
+input[type="range"]::-moz-range-thumb {
+    width: 1.5rem; /* w-6 */
+    height: 1.5rem; /* h-6 */
+    background-color: #8B5CF6; /* purple-500 */
+    border-radius: 9999px; /* rounded-full */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+    border: 2px solid #C4B5FD; /* border-2 border-purple-300 */
+}
+.display-box {
+    background-color: #1A202C; /* gray-900 */
+    padding: 0.75rem; /* p-3 */
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 0.875rem; /* text-sm */
+    font-family: monospace; /* font-mono */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.clock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: #1A202C; /* gray-900 */
+    border-radius: 0.5rem; /* rounded-lg */
+    border: 2px solid #A78BFA; /* border-2 border-purple-400 */
+    width: 150px;
+    height: 100px;
+    transition: background-color 0.3s ease;
+}
+.stationary-clock {
+    background-color: rgba(16, 185, 129, 0.5); /* green-700/50 */
+}
+.moving-clock {
+    background-color: rgba(59, 130, 246, 0.5); /* blue-700/50 */
+}
+.ruler-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem; /* space-y-4 */
+}
+.ruler {
+    width: 100%;
+    background-color: #3B82F6; /* blue-500 */
+    height: 3rem; /* h-12 */
+    border-radius: 0.375rem; /* rounded-md */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700; /* font-bold */
+    font-size: 1.125rem; /* text-lg */
+    color: white;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); /* shadow-inner */
+    transition: transform 0.2s ease-out; /* Smooth transition for contraction */
+    transform-origin: center center; /* Ensure scaling is from the center */
+}
+.original-ruler {
+    background-color: #2563EB; /* blue-600 */
+}
+.contracted-ruler {
+    background-color: #1D4ED8; /* blue-700 */
+}
+.note {
+    color: #A0AEC0; /* gray-400 */
+    font-size: 0.875rem; /* text-sm */
+    font-style: italic;
+    margin-top: 1rem;
+}
+/* Custom styles for glowing text/elements */
+.glow-text {
+    text-shadow: 0 0 8px rgba(192, 132, 252, 0.7);
+}
+/* Style for the p5.js canvas container */
+#spacetime-canvas-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    background-color: #1A202C; /* gray-900 */
+    border-radius: 0.5rem; /* rounded-lg */
+    border: 2px solid #A78BFA; /* border-2 border-purple-400 */
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Make it square */
+    max-width: 500px; /* Limit max size for larger screens */
+    margin: auto;
+    margin-top: 2rem;
+}
+canvas {
+    display: block; /* Remove extra space below canvas */
+    width: 100% !important; /* Override p5.js default fixed width */
+    height: 100% !important; /* Override p5.js default fixed height */
+}
+
+/* Responsive adjustments for clock/ruler layouts */
+@media (min-width: 768px) { /* md breakpoint */
+    .flex-col.md\:flex-row {
+        flex-direction: row;
+    }
+    .space-y-6.md\:space-y-0 {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+    .space-y-6.md\:space-y-0 > * {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .md\:space-x-8 > *:not(:last-child) {
+        margin-right: 2rem; /* space-x-8 */
+    }
+}
