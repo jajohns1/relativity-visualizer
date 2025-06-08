@@ -7,6 +7,11 @@ let C = C_norm
 let isSIUnits = false; // Flag to track if SI units are active
 let isFormulasVisible = false;
 
+function isTouchDevice() {
+    return 'ontouchstart' in window || 
+           navigator.maxTouchPoints > 0 || 
+           navigator.msMaxTouchPoints > 0;
+}
 
 // Debugging: Check critical dependencies
 function checkDependencies() {
@@ -88,6 +93,39 @@ document.addEventListener('DOMContentLoaded', () => {
             box.textContent = "Error initializing simulation";
         });
     }
+
+    if (isTouchDevice()) {
+        // Add a help tooltip for mobile users
+        const spacetimeContainer = document.getElementById('spacetime-diagram-sim');
+        const tooltip = document.createElement('div');
+        tooltip.className = 'mobile-tooltip';
+        tooltip.innerHTML = 'Tap the diagram to add events';
+        tooltip.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            z-index: 100;
+            font-size: 14px;
+            pointer-events: none;
+            animation: fadeOut 3s forwards 3s;
+        `;
+        spacetimeContainer.insertBefore(tooltip, spacetimeContainer.firstChild);
+        
+        // Add CSS for the animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }    
 });
 
 /**
@@ -726,15 +764,33 @@ const sketch = function (sketch) {
         sketch.pop(); // End of transformed coordinates
     };
 
-    sketch.mouseClicked = function () {
+    sketch.touchStarted = function() {
         if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
             sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
-
+            
+            // Convert touch coordinates with unit scaling
+            let unitScale = C_norm;
+            let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
+            let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
+    
+            events.push({
+                x: x_coord_in_units,
+                ct: ct_coord_in_units
+            });
+            sketch.redraw();
+            return false; // Prevent default touch behavior
+        }
+    };
+    
+    sketch.mouseClicked = function() {
+        if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
+            sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
+    
             // Convert mouse coordinates with unit scaling
             let unitScale = C_norm;
             let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
             let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
-
+    
             events.push({
                 x: x_coord_in_units,
                 ct: ct_coord_in_units

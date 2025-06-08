@@ -451,3 +451,111 @@ canvas {
         border-width: 4px;
     }
 }
+
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+    button, .preset-btn, input[type="range"] {
+        min-height: 48px; /* Recommended minimum touch target size */
+    }
+    
+    .preset-btn {
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+    
+    /* Larger hit area for spacetime diagram */
+    #spacetime-canvas-container {
+        touch-action: none; /* Prevent browser touch gestures */
+        position: relative;
+    }
+    
+    #spacetime-canvas-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10;
+        pointer-events: none;
+        background: transparent;
+    }
+    
+    /* Visual feedback for touch events */
+    .clock:active, button:active {
+        transform: scale(0.95);
+        transition: transform 0.1s ease;
+    }
+}
+
+/* Prevent text selection on buttons */
+button, .preset-btn {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Add haptic feedback where supported */
+@media (hover: none) and (pointer: coarse) {
+    button:active {
+        animation: haptic-pulse 0.1s;
+    }
+    
+    @keyframes haptic-pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(0.98); }
+        100% { transform: scale(1); }
+    }
+}
+
+/* Better spacing for mobile */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+        margin: 0.5rem;
+    }
+    
+    .simulation-section {
+        padding: 1rem;
+    }
+    
+    .global-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .preset-btn {
+        flex: 1 1 45%;
+        min-width: 45%;
+        text-align: center;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Better canvas sizing */
+    #spacetime-canvas-container {
+        aspect-ratio: 1/1;
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    .preset-btn {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+    
+    .clock {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0.5rem 0 !important;
+    }
+}
+
+/* Prevent zooming on input focus */
+@media (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px;
+    }
+}
