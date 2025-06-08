@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function lorentzTransform(t, x, v) {
     const gamma = calculateLorentzFactor(v);
     const v_over_c = v / C;
-    
+
     // Time transformation (include c² term in SI units)
     const tPrime = gamma * (t - (v_over_c * x) / C);
     // Space transformation
@@ -125,8 +125,8 @@ globalVelocityInput.addEventListener('input', () => {
 function updateAllVelocities(v) {
     globalVelocityInput.isGlobalUpdate = true;
     globalVelocityInput.value = v;
-    globalVelocityDisplay.textContent = isSIUnits 
-        ? `${(v * C_SI).toExponential(2)} m/s` 
+    globalVelocityDisplay.textContent = isSIUnits
+        ? `${(v * C_SI).toExponential(2)} m/s`
         : `${v.toFixed(3)}c`;
 
     // Update all section-specific sliders
@@ -400,7 +400,7 @@ const sketch = function (sketch) {
         originX = sketch.width / 2;
         originY = sketch.height / 2;
 
-        unitScale = 1/C_norm; // Scale down for SI units
+        unitScale = 1 / C_norm; // Scale down for SI units
 
         // Adjust scale factor based on canvas size for responsiveness
         scaleFactor = sketch.min(sketch.width, sketch.height) / 5; // Example scaling, ensures content fits
@@ -420,14 +420,14 @@ const sketch = function (sketch) {
         // Get the current velocity value
         const v_input = parseFloat(velocitySpacetimeInput.value);
         currentSpacetimeVelocity = v_input;
-        
+
         // Calculate effective v/c based on units
         const effective_v = currentSpacetimeVelocity;
         const gamma = calculateLorentzFactor(currentSpacetimeVelocity);
-        
+
         // Update display - show full velocity in SI units, v/c in natural units
-        velocitySpacetimeDisplay.textContent = isSIUnits 
-            ? `${(currentSpacetimeVelocity * C_SI).toExponential(2)} m/s` 
+        velocitySpacetimeDisplay.textContent = isSIUnits
+            ? `${(currentSpacetimeVelocity * C_SI).toExponential(2)} m/s`
             : `${currentSpacetimeVelocity.toFixed(3)}c`;
         lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
 
@@ -580,7 +580,7 @@ const sketch = function (sketch) {
                 // x' = gamma(x - vt), t'=gamma(t - vx/c^2)
                 // If t'=0, then t = vx/c^2. Substitute into x'
                 // x' = gamma(x - v(vx/c^2)) = gamma(x - v^2x/c^2) = gamma * x * (1 - v^2/c^2) = gamma * x * (1/gamma^2) = x / gamma
-                const x_at_ct0_in_moving_frame = (1 / gamma) * (1/C);
+                const x_at_ct0_in_moving_frame = (1 / gamma) * (1 / C);
 
                 let line_x1 = -canvas_half_width * extend_line_factor;
                 let line_y1 = obj_slope * (line_x1 - x_at_ct0_in_moving_frame * scaleFactor);
@@ -598,7 +598,7 @@ const sketch = function (sketch) {
         sketch.strokeWeight(0.7);
         for (let coord = -4; coord <= 4; coord++) {
             let K_val = (coord / gamma) * scaleFactor * C_norm;
-            
+
             let grid_line_x1 = -canvas_half_width * extend_line_factor;
             let grid_line_y1 = axis2_slope * grid_line_x1 + K_val;
             let grid_line_x2 = canvas_half_width * extend_line_factor;
@@ -642,8 +642,8 @@ const sketch = function (sketch) {
             sketch.fill(255, 0, 255); // Magenta for events
             sketch.noStroke();
             sketch.ellipse(
-                event.x * scaleFactor * unitScale, 
-                event.ct * scaleFactor * unitScale, 
+                event.x * scaleFactor * unitScale,
+                event.ct * scaleFactor * unitScale,
                 10, 10
             );
 
@@ -729,19 +729,24 @@ const sketch = function (sketch) {
     sketch.mouseClicked = function () {
         if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
             sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
-            
+
             // Convert mouse coordinates with unit scaling
             let unitScale = C_norm;
             let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
             let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
-    
-            events.push({ 
-                x: x_coord_in_units, 
-                ct: ct_coord_in_units 
+
+            events.push({
+                x: x_coord_in_units,
+                ct: ct_coord_in_units
             });
             sketch.redraw();
         }
     };
+
+    // sketch.touchStarted = function() {
+    //     sketch.mouseClicked();
+    //     return false; // Prevent default
+    // };
 };
 
 // Initialize p5.js sketch when the page loads
@@ -804,14 +809,14 @@ function updateVelocityAddition() {
     const v2 = parseFloat(velocityV2Input.value);
     const vTotal = calculateRelativisticVelocityAddition(v1, v2);
 
-    velocityV1Display.textContent = isSIUnits 
-        ? `${(v1 * C_SI).toExponential(2)} m/s` 
+    velocityV1Display.textContent = isSIUnits
+        ? `${(v1 * C_SI).toExponential(2)} m/s`
         : `${v1.toFixed(3)}c`;
-    velocityV2Display.textContent = isSIUnits 
-        ? `${(v2 * C_SI).toExponential(2)} m/s` 
+    velocityV2Display.textContent = isSIUnits
+        ? `${(v2 * C_SI).toExponential(2)} m/s`
         : `${v2.toFixed(3)}c`;
-    resultantVelocityDisplay.textContent = isSIUnits 
-        ? `${(vTotal * C_SI).toExponential(2)} m/s` 
+    resultantVelocityDisplay.textContent = isSIUnits
+        ? `${(vTotal * C_SI).toExponential(2)} m/s`
         : `${vTotal.toFixed(3)}c`;
 }
 
@@ -892,60 +897,65 @@ document.querySelectorAll('input[type="range"]').forEach(slider => {
 let scene, camera, renderer, cube, controls;
 
 function init3DPlot() {
-    if (!isWebGLAvailable()) {
-        document.getElementById('3d-plot-container').innerHTML =
-            '<p class="text-red-500">3D not supported in your browser.</p>';
-        return;
-    }
+    try {
+        if (!isWebGLAvailable()) {
+            document.getElementById('3d-plot-container').innerHTML =
+                '<p class="text-red-500">3D not supported in your browser.</p>';
+            return;
+        }
 
-    // 1. Create Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1A202C);
-    addEnhancedLighting(scene);
+        // 1. Create Scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1A202C);
+        addEnhancedLighting(scene);
 
-    // 2. Camera
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
+        // 2. Camera
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
 
-    // 3. Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    const container = document.getElementById('3d-plot-container');
-    renderer.setSize(container.clientWidth, 400);
-    container.appendChild(renderer.domElement);
-
-    // 4. Create Cube
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x8B5CF6,
-        roughness: 0.2,
-        metalness: 0.5,
-        transparent: true,
-        opacity: 0.8
-    });
-    cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
-
-    // 5. Controls
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 2;
-    controls.maxDistance = 10;
-    controls.zoomSpeed = 0.5;
-
-    // Handle resizing
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / 400;
-        camera.updateProjectionMatrix();
+        // 3. Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        const container = document.getElementById('3d-plot-container');
         renderer.setSize(container.clientWidth, 400);
-    });
+        container.appendChild(renderer.domElement);
 
-    animate();
+        // 4. Create Cube
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x8B5CF6,
+            roughness: 0.2,
+            metalness: 0.5,
+            transparent: true,
+            opacity: 0.8
+        });
+        cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        // 5. Controls
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 2;
+        controls.maxDistance = 10;
+        controls.zoomSpeed = 0.5;
+
+        // Handle resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / 400;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, 400);
+        });
+
+        animate();
+    } catch (err) {
+        console.error('3D initialization failed:', err);
+        showErrorToUser('3D visualization unavailable');
+    }
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    
+
     if (controls) controls.update();
     if (cube) {
         cube.rotation.x += 0.005;
@@ -969,7 +979,7 @@ function update3DLengthContraction(v) {
     }
 
     const gamma = calculateLorentzFactor(Math.abs(v));
-    
+
     try {
         cube.scale.x = 1 / gamma; // Contract along motion axis
         cube.scale.y = 1;         // No change perpendicular
@@ -978,10 +988,10 @@ function update3DLengthContraction(v) {
         // Visual effects
         cube.material.opacity = 0.5 + 0.5 / gamma;
         cube.material.color.setHSL(0.7, 0.9, 0.6 - (0.3 / gamma)); // Color change effect
-        
+
         // Update display
-        length3DVelocityDisplay.textContent = isSIUnits 
-            ? `${(v * C_SI).toExponential(2)} m/s` 
+        length3DVelocityDisplay.textContent = isSIUnits
+            ? `${(v * C_SI).toExponential(2)} m/s`
             : `${v.toFixed(3)}c`;
     } catch (error) {
         console.error("Error updating cube:", error);
@@ -1003,7 +1013,7 @@ function isWebGLAvailable() {
     try {
         const canvas = document.createElement('canvas');
         return !!(
-            window.WebGLRenderingContext && 
+            window.WebGLRenderingContext &&
             (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
         );
     } catch (e) {
@@ -1080,7 +1090,7 @@ function animateDoppler() {
 function addEnhancedLighting(scene) {
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
-    
+
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
@@ -1114,7 +1124,7 @@ function updateDopplerSize() {
 
 function updateDopplerEffect(v) {
     if (!lightSphere) return;
-    
+
     const dopplerFactor = Math.sqrt((1 + v) / (1 - v));
     const absV = Math.abs(v);
 
@@ -1124,21 +1134,21 @@ function updateDopplerEffect(v) {
         lightSphere.material.color.setHSL(hue, 1, 0.5);
         lightSphere.material.emissive.setHSL(hue, 0.7, 0.3);
         lightSphere.material.emissiveIntensity = absV * 0.5;
-    } 
+    }
     else if (v < 0) { // Receding (redshift)
         const hue = 0; // Red
         lightSphere.material.color.setHSL(hue, 1, 0.5);
         lightSphere.material.emissive.setHSL(hue, 0.3, 0.2);
         lightSphere.material.emissiveIntensity = absV * 0.3;
-    } 
+    }
     else { // Stationary
         lightSphere.material.color.setHSL(0, 0, 1); // White
         lightSphere.material.emissiveIntensity = 0;
     }
 
     // Update numerical display only
-    dopplerVelocityDisplay.textContent = isSIUnits 
-        ? `${(v * C_SI).toExponential(2)} m/s` 
+    dopplerVelocityDisplay.textContent = isSIUnits
+        ? `${(v * C_SI).toExponential(2)} m/s`
         : `${v.toFixed(3)}c`;
 }
 
@@ -1167,10 +1177,10 @@ function animateDoppler() {
 
 function updateDopplerEffect(v) {
     if (!lightSphere) return;
-    
+
     const dopplerFactor = Math.sqrt((1 + v) / (1 - v));
     const absV = Math.abs(v);
-    
+
     // Create color gradient based on velocity
     if (v > 0) { // Approaching (blueshift)
         // Blend from white (0) to blue (max velocity)
@@ -1178,34 +1188,34 @@ function updateDopplerEffect(v) {
         const saturation = 1;
         const lightness = 0.8 - (0.3 * absV); // Gets darker as velocity increases
         lightSphere.material.color.setHSL(hue, saturation, lightness);
-        
+
         // Add emission effect for approaching objects
         lightSphere.material.emissive = new THREE.Color(hue, saturation * 0.7, lightness * 0.5);
         lightSphere.material.emissiveIntensity = absV * 0.5;
-    } 
+    }
     else if (v < 0) { // Receding (redshift)
         // Blend from white (0) to red (max velocity)
         const hue = 0; // Red
         const saturation = 1;
         const lightness = 0.8 - (0.3 * absV);
         lightSphere.material.color.setHSL(hue, saturation, lightness);
-        
+
         // Subtler emission for receding objects
         lightSphere.material.emissive = new THREE.Color(hue, saturation * 0.3, lightness * 0.2);
         lightSphere.material.emissiveIntensity = absV * 0.3;
-    } 
+    }
     else { // Stationary
         lightSphere.material.color.setHSL(0, 0, 1); // Pure white
         lightSphere.material.emissive.setHSL(0, 0, 0);
         lightSphere.material.emissiveIntensity = 0;
     }
-    
+
     // // Add visual indicator of frequency change
     // lightSphere.scale.setScalar(1 + (dopplerFactor - 1) * 0.1); // Subtle size change
-    
+
     // Update display
-    dopplerVelocityDisplay.textContent = isSIUnits 
-        ? `${(v * C_SI).toExponential(2)} m/s` 
+    dopplerVelocityDisplay.textContent = isSIUnits
+        ? `${(v * C_SI).toExponential(2)} m/s`
         : `${v.toFixed(3)}c`;
 }
 
@@ -1252,18 +1262,45 @@ function addEnhancedLighting(scene) {
     const mainLight = new THREE.DirectionalLight(0xffffff, 1);
     mainLight.position.set(1, 1, 1);
     scene.add(mainLight);
-    
+
     // Fill light
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
     fillLight.position.set(-1, -1, -1);
     scene.add(fillLight);
-    
+
     // Ambient light
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
-    
+
     // Optional rim light for better edge definition
     const rimLight = new THREE.DirectionalLight(0xffffff, 0.75);
     rimLight.position.set(0, 0, 1);
     scene.add(rimLight);
 }
+
+// Add proper cleanup
+window.addEventListener('beforeunload', () => {
+    if (renderer) renderer.dispose();
+    if (scene) scene.traverse(obj => {
+        if (obj.dispose) obj.dispose();
+    });
+});
+
+// Add to your cleanup
+window.addEventListener('unload', () => {
+    cancelAnimationFrame(animationFrameId);
+    if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
+});
+
+// Throttle expensive operations
+const throttle = (fn, delay) => {
+    let lastCall = 0;
+    return (...args) => {
+        const now = Date.now();
+        if (now - lastCall < delay) return;
+        lastCall = now;
+        return fn(...args);
+    };
+};
+

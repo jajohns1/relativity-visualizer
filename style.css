@@ -91,7 +91,8 @@ input[type="range"]::-moz-range-thumb {
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background-color: #1A202C; /* gray-900 */
+    background-color: rgba(16, 185, 129, 0.8); /* More opaque */
+    color: #fff; /* Ensure contrast */
     border-radius: 0.5rem; /* rounded-lg */
     border: 2px solid #A78BFA; /* border-2 border-purple-400 */
     width: 150px;
@@ -133,7 +134,7 @@ input[type="range"]::-moz-range-thumb {
     background-color: #1D4ED8; /* blue-700 */
 }
 .note {
-    color: #A0AEC0; /* gray-400 */
+    color: #E2E8F0; /* Lighter gray */
     font-size: 0.875rem; /* text-sm */
     font-style: italic;
     margin-top: 1rem;
@@ -320,3 +321,22 @@ input[type="range"] {
   .global-control-active input[type="range"]::-webkit-slider-thumb {
     opacity: 0.5;
   }
+
+#spacetime-canvas-container, 
+#3d-plot-container, 
+#doppler-3d-container {
+  width: 100%;
+  min-height: 300px;
+  max-height: 500px;
+  height: 50vh;
+}
+
+@media (max-width: 768px) {
+  .simulation-section {
+    padding: 1rem;
+  }
+  .clock {
+    width: 120px;
+    height: 80px;
+  }
+}
