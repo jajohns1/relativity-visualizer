@@ -3,18 +3,83 @@ let C = 1; // Represents speed of light for fractional velocity calculations (c-
 const C_SI = 299792458; // Speed of light in meters per second (SI units)
 
 let isSIUnits = false; // Flag to track if SI units are active
+let isFormulasVisible = false;
 
-/**
- * Calculates the Lorentz factor (gamma).
- * @param {number} v The velocity as a fraction of the speed of light (v/c).
- * @returns {number} The Lorentz factor. Returns Infinity if v >= C.
- */
-function calculateLorentzFactor(v) {
-    // Ensure v is always treated as a fraction of the current C (1 or C_SI)
-    const effective_v_over_c = v / C;
-    if (Math.abs(effective_v_over_c) >= 1) return Infinity; // Approaching or reaching light speed
-    return 1 / Math.sqrt(1 - (effective_v_over_c * effective_v_over_c));
+
+// Debugging: Check critical dependencies
+function checkDependencies() {
+    if (typeof p5 === 'undefined') {
+        console.error("p5.js not loaded! Spacetime diagram will fail.");
+        document.getElementById('spacetime-diagram-sim').innerHTML +=
+            '<p class="text-red-500">Error: p5.js library failed to load.</p>';
+    }
+    if (typeof MathJax === 'undefined') {
+        console.warn("MathJax not loaded - formulas won't render");
+    }
 }
+
+// Safe value parser with fallback
+function safeParseFloat(value, defaultValue = 0) {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+}
+
+// Robust Lorentz Factor Calculation
+function calculateLorentzFactor(v) {
+    try {
+        const effective_v = safeParseFloat(v);
+        const effective_v_over_c = effective_v / C;
+
+        if (Math.abs(effective_v_over_c) >= 1) {
+            console.warn(`Velocity (v=${effective_v}) reaches light speed`);
+            return Infinity;
+        }
+
+        const denominator = Math.sqrt(1 - (effective_v_over_c ** 2));
+        if (denominator < 1e-9) {
+            console.warn("Extreme velocity - precision limit reached");
+            return Infinity;
+        }
+
+        return 1 / denominator;
+    } catch (err) {
+        console.error("Lorentz factor calculation error:", err);
+        return 1; // Fallback to no dilation
+    }
+}
+
+// Throttled Velocity Updates
+let lastUpdate = 0;
+function throttleUpdate(callback, value) {
+    const now = performance.now();
+    if (now - lastUpdate > 16) { // ~60fps
+        callback(value);
+        lastUpdate = now;
+    }
+}
+
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    checkDependencies();
+
+    try {
+        // Initialize all components
+        updateAllVelocities(safeParseFloat(globalVelocityInput.value));
+
+        // Enable MathJax if loaded
+        if (typeof MathJax !== 'undefined' && isFormulasVisible) {
+            MathJax.typesetPromise().catch(err =>
+                console.error("MathJax typesetting failed:", err)
+            );
+        }
+    } catch (err) {
+        console.error("Initialization error:", err);
+        // User-friendly error display
+        document.querySelectorAll('.display-box').forEach(box => {
+            box.textContent = "Error initializing simulation";
+        });
+    }
+});
 
 /**
  * Performs Lorentz Transformation for an event (t, x) to a new frame moving at velocity v.
@@ -45,6 +110,7 @@ globalVelocityInput.addEventListener('input', () => {
 
 // Function to update all velocity sliders and displays
 function updateAllVelocities(v) {
+    globalVelocityInput.isGlobalUpdate = true;
     globalVelocityInput.value = v;
     globalVelocityDisplay.textContent = `${v.toFixed(3)}c`;
 
@@ -53,6 +119,8 @@ function updateAllVelocities(v) {
     velocityLengthInput.value = v;
     velocitySpacetimeInput.value = v; // Spacetime can be negative
     twinVelocityInput.value = v;
+    length3DVelocityInput.value = v;
+    dopplerVelocityInput.value = v;
 
     // Trigger updates for each section
     updateTimeDilationClocks();
@@ -63,6 +131,19 @@ function updateAllVelocities(v) {
 
     // Twin paradox update
     updateTwinParadox();
+
+    update3DLengthContraction(v);
+    updateDopplerEffect(v);
+
+    // Update 3D plot
+    if (cube) {
+        const gamma = calculateLorentzFactor(v);
+        cube.scale.x = 1 / gamma; // Length contraction along motion axis
+        cube.scale.y = 1;         // No contraction perpendicular
+        cube.scale.z = 1;         // No contraction perpendicular
+    }
+
+    globalVelocityInput.isGlobalUpdate = false;
 }
 
 // Event listeners for preset buttons
@@ -190,6 +271,10 @@ velocityTimeInput.addEventListener('input', () => {
         cancelAnimationFrame(animationFrameId);
     }
     updateTimeDilationClocks();
+    const v = parseFloat(velocityTimeInput.value);
+    if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
+        updateAllVelocities(v);
+    }
 });
 
 // Play/Pause button
@@ -255,7 +340,13 @@ function updateLengthContraction() {
 }
 
 // Event listener for length contraction slider
-velocityLengthInput.addEventListener('input', updateLengthContraction);
+velocityLengthInput.addEventListener('input', () => {
+    updateLengthContraction
+    const v = parseFloat(velocityLengthInput.value);
+    if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
+        updateAllVelocities(v);
+    }
+});
 
 // Initial update for length contraction when the page loads
 updateLengthContraction();
@@ -277,11 +368,11 @@ let events = []; // Array to store custom events {x, ct} in stationary frame coo
  * The p5.js sketch for the spacetime diagram.
  * @param {p5} sketch The p5.js instance.
  */
-const sketch = function(sketch) {
+const sketch = function (sketch) {
     let scaleFactor = 50; // Pixels per unit of space/time (ct)
     let originX, originY; // Center of the canvas
 
-    sketch.setup = function() {
+    sketch.setup = function () {
         // Create the canvas inside the specified container
         const canvas = sketch.createCanvas(spacetimeCanvasContainer.offsetWidth, spacetimeCanvasContainer.offsetHeight);
         canvas.parent('spacetime-canvas-container');
@@ -305,7 +396,7 @@ const sketch = function(sketch) {
         sketch.noLoop(); // Draw only when needed (on velocity change, frame change, or event click)
     };
 
-    sketch.draw = function() {
+    sketch.draw = function () {
         sketch.background(40, 40, 60); // Dark background
 
         // Update velocity and Lorentz factor display
@@ -459,7 +550,7 @@ const sketch = function(sketch) {
                 // If t'=0, then t = vx/c^2. Substitute into x'
                 // x' = gamma(x - v(vx/c^2)) = gamma(x - v^2x/c^2) = gamma * x * (1 - v^2/c^2) = gamma * x * (1/gamma^2) = x / gamma
                 const x_at_ct0_in_moving_frame = 1 / gamma; // x' when original x=1 and ct'=0
-                
+
                 let line_x1 = -canvas_half_width * extend_line_factor;
                 let line_y1 = obj_slope * (line_x1 - x_at_ct0_in_moving_frame * scaleFactor);
                 let line_x2 = canvas_half_width * extend_line_factor;
@@ -507,8 +598,8 @@ const sketch = function(sketch) {
             } else { // lines of constant x
                 // x = gamma(x' + vt') => t' = -(1/v)x' + x/(v*gamma)
                 if (current_v_for_drawing === 0) { // vertical lines
-                     sketch.line(coord * scaleFactor, -canvas_half_height * extend_line_factor, coord * scaleFactor, canvas_half_height * extend_line_factor);
-                     continue;
+                    sketch.line(coord * scaleFactor, -canvas_half_height * extend_line_factor, coord * scaleFactor, canvas_half_height * extend_line_factor);
+                    continue;
                 }
                 K_x_val = -(coord / (current_v_for_drawing * gamma)) * scaleFactor;
             }
@@ -576,12 +667,12 @@ const sketch = function(sketch) {
         let x_sec_angle_for_label = sketch.atan(axis2_slope);
         sketch.push();
         sketch.translate(label_offset_from_origin * sketch.cos(x_sec_angle_for_label),
-                         label_offset_from_origin * sketch.sin(x_sec_angle_for_label));
+            label_offset_from_origin * sketch.sin(x_sec_angle_for_label));
         sketch.rotate(x_sec_angle_for_label); // Rotate text to align with the axis
         if (activeFrame === 'stationary') {
-             sketch.text("x'", 0, 0);
+            sketch.text("x'", 0, 0);
         } else {
-             sketch.text("x", 0, 0);
+            sketch.text("x", 0, 0);
         }
         sketch.pop();
 
@@ -594,19 +685,19 @@ const sketch = function(sketch) {
         }
         sketch.push();
         sketch.translate(label_offset_from_origin * sketch.cos(ct_sec_angle_for_label),
-                         label_offset_from_origin * sketch.sin(ct_sec_angle_for_label));
+            label_offset_from_origin * sketch.sin(ct_sec_angle_for_label));
         sketch.rotate(ct_sec_angle_for_label); // Rotate text to align with the axis
         if (activeFrame === 'stationary') {
-             sketch.text("ct'", 0, 0);
+            sketch.text("ct'", 0, 0);
         } else {
-             sketch.text("ct", 0, 0);
+            sketch.text("ct", 0, 0);
         }
         sketch.pop();
 
         sketch.pop(); // End of transformed coordinates
     };
 
-    sketch.mouseClicked = function() {
+    sketch.mouseClicked = function () {
         // Only add events if click is within canvas bounds
         if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
             sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
@@ -628,6 +719,10 @@ s = new p5(sketch);
 velocitySpacetimeInput.addEventListener('input', () => {
     // Redraw the canvas to apply new velocity
     s.redraw();
+    const v = parseFloat(velocitySpacetimeInput.value);
+    if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
+        updateAllVelocities(v);
+    }
 });
 
 // Event listener for frame radio buttons
@@ -713,7 +808,13 @@ function updateTwinParadox() {
 }
 
 // Event listener for twin paradox velocity slider
-twinVelocityInput.addEventListener('input', updateTwinParadox);
+twinVelocityInput.addEventListener('input', () => {
+    updateTwinParadox
+    const v = parseFloat(twinVelocityInput.value);
+    if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
+        updateAllVelocities(v);
+    }
+});
 
 // Initial update for twin paradox when page loads
 updateTwinParadox();
@@ -740,3 +841,392 @@ document.addEventListener('DOMContentLoaded', () => {
         formulaDisplays.forEach(display => MathJax.typesetPromise([display]));
     }
 });
+
+document.querySelectorAll('input[type="range"]').forEach(slider => {
+    slider.addEventListener('input', (e) => {
+        const sliderGroup = e.target.closest('.slider-group');
+        if (sliderGroup) {
+            sliderGroup.setAttribute('data-value', e.target.value + 'c');
+        }
+    });
+});
+
+// 3D Plot Variables
+let scene, camera, renderer, cube, controls;
+
+function init3DPlot() {
+    if (!isWebGLAvailable()) {
+        document.getElementById('3d-plot-container').innerHTML =
+            '<p class="text-red-500">3D not supported in your browser.</p>';
+        return;
+    }
+
+    // 1. Create Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1A202C);
+    addEnhancedLighting(scene);
+
+    // 2. Camera
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+
+    // 3. Renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    const container = document.getElementById('3d-plot-container');
+    renderer.setSize(container.clientWidth, 400);
+    container.appendChild(renderer.domElement);
+
+    // 4. Create Cube
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x8B5CF6,
+        roughness: 0.2,
+        metalness: 0.5,
+        transparent: true,
+        opacity: 0.8
+    });
+    cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // 5. Controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 2;
+    controls.maxDistance = 10;
+    controls.zoomSpeed = 0.5;
+
+    // Handle resizing
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / 400;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, 400);
+    });
+
+    animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    if (controls) controls.update();
+    if (cube) {
+        cube.rotation.x += 0.005;
+        cube.rotation.y += 0.007;
+    }
+    if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+    }
+}
+
+// Add these variables
+let length3DVelocityInput = document.getElementById('length-3d-velocity');
+let length3DVelocityDisplay = document.getElementById('length-3d-velocity-display');
+
+// Update the cube scaling based on the dedicated slider
+function update3DLengthContraction(v) {
+    // Check if cube exists
+    if (!cube) {
+        console.error("Cube not initialized yet!");
+        return;
+    }
+
+    const gamma = calculateLorentzFactor(Math.abs(v));
+    
+    try {
+        cube.scale.x = 1 / gamma; // Contract along motion axis
+        cube.scale.y = 1;         // No change perpendicular
+        cube.scale.z = 1;         // No change perpendicular
+
+        // Visual effects
+        cube.material.opacity = 0.5 + 0.5 / gamma;
+        cube.material.color.setHSL(0.7, 0.9, 0.6 - (0.3 / gamma)); // Color change effect
+        
+        // Update display
+        length3DVelocityDisplay.textContent = isSIUnits 
+            ? `${(v * C_SI).toExponential(2)} m/s` 
+            : `${v.toFixed(3)}c`;
+    } catch (error) {
+        console.error("Error updating cube:", error);
+    }
+}
+
+if (!isWebGLAvailable()) {
+    document.getElementById('3d-plot-container').innerHTML =
+        '<p class="text-red-500">3D not supported in your browser.</p>';
+}
+
+// Doppler Effect Variables
+let dopplerScene, dopplerCamera, dopplerRenderer, lightSphere, dopplerControls;
+let dopplerVelocityInput = document.getElementById('doppler-velocity');
+let dopplerVelocityDisplay = document.getElementById('doppler-velocity-display');
+
+// Correct WebGL availability check for Three.js
+function isWebGLAvailable() {
+    try {
+        const canvas = document.createElement('canvas');
+        return !!(
+            window.WebGLRenderingContext && 
+            (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+        );
+    } catch (e) {
+        return false;
+    }
+}
+
+function initDoppler3D() {
+    if (!isWebGLAvailable()) {
+        document.getElementById('doppler-3d-container').innerHTML =
+            '<p class="text-red-500">WebGL not supported in your browser</p>';
+        return;
+    }
+
+    // 1. Scene setup
+    dopplerScene = new THREE.Scene();
+    dopplerScene.background = new THREE.Color(0x1A202C);
+    addEnhancedLighting(dopplerScene);
+
+    // 2. Camera
+    dopplerCamera = new THREE.PerspectiveCamera(75, 1.77, 0.1, 1000);
+    dopplerCamera.position.set(0, 0, 5);
+
+    // 3. Renderer
+    dopplerRenderer = new THREE.WebGLRenderer({ antialias: true });
+    const container = document.getElementById('doppler-3d-container');
+    dopplerRenderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(dopplerRenderer.domElement);
+
+    // 4. Create Sphere
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.1,
+        metalness: 0.3,
+        emissive: 0x000000,
+        wireframe: false
+    });
+    lightSphere = new THREE.Mesh(geometry, material);
+    dopplerScene.add(lightSphere);
+
+    // 5. Controls
+    dopplerControls = new THREE.OrbitControls(dopplerCamera, dopplerRenderer.domElement);
+    dopplerControls.enableDamping = true;
+    dopplerControls.dampingFactor = 0.05;
+    dopplerControls.minDistance = 3;
+    dopplerControls.maxDistance = 15;
+    dopplerControls.zoomSpeed = 0.5;
+
+    // Handle resizing
+    window.addEventListener('resize', () => {
+        const container = document.getElementById('doppler-3d-container');
+        dopplerCamera.aspect = container.clientWidth / container.clientHeight;
+        dopplerCamera.updateProjectionMatrix();
+        dopplerRenderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    animateDoppler();
+}
+
+function animateDoppler() {
+    requestAnimationFrame(animateDoppler);
+    if (dopplerControls) dopplerControls.update();
+    // if (lightSphere) {
+    //     const pulse = 1 + Math.sin(Date.now() * 0.001) * 0.02;
+    //     lightSphere.scale.set(pulse, pulse, pulse);
+    // }
+    if (dopplerRenderer && dopplerScene && dopplerCamera) {
+        dopplerRenderer.render(dopplerScene, dopplerCamera);
+    }
+}
+
+// Lighting function
+function addEnhancedLighting(scene) {
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    init3DPlot();
+    initDoppler3D();
+    update3DLengthContraction(0);
+    updateDopplerEffect(0);
+
+    // if (isWebGLAvailable()) {
+    //     initDoppler3D();
+    //     updateDopplerEffect(0);
+    // } else {
+    //     document.getElementById('doppler-3d-container').innerHTML = 
+    //       '<p class="text-red-500">WebGL not supported in your browser</p>';
+    // }    
+});
+
+function updateDopplerSize() {
+    const container = document.getElementById('doppler-3d-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    dopplerCamera.aspect = width / height;
+    dopplerCamera.updateProjectionMatrix();
+    dopplerRenderer.setSize(width, height);
+}
+
+function updateDopplerEffect(v) {
+    if (!lightSphere) return;
+    
+    const dopplerFactor = Math.sqrt((1 + v) / (1 - v));
+    const absV = Math.abs(v);
+
+    // ONLY update color and brightness - no size change!
+    if (v > 0) { // Approaching (blueshift)
+        const hue = 0.6; // Blue
+        lightSphere.material.color.setHSL(hue, 1, 0.5);
+        lightSphere.material.emissive.setHSL(hue, 0.7, 0.3);
+        lightSphere.material.emissiveIntensity = absV * 0.5;
+    } 
+    else if (v < 0) { // Receding (redshift)
+        const hue = 0; // Red
+        lightSphere.material.color.setHSL(hue, 1, 0.5);
+        lightSphere.material.emissive.setHSL(hue, 0.3, 0.2);
+        lightSphere.material.emissiveIntensity = absV * 0.3;
+    } 
+    else { // Stationary
+        lightSphere.material.color.setHSL(0, 0, 1); // White
+        lightSphere.material.emissiveIntensity = 0;
+    }
+
+    // Update numerical display only
+    dopplerVelocityDisplay.textContent = isSIUnits 
+        ? `${(v * C_SI).toExponential(2)} m/s` 
+        : `${v.toFixed(3)}c`;
+}
+
+function updateDopplerSize() {
+    const container = document.getElementById('doppler-3d-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    dopplerCamera.aspect = width / height;
+    dopplerCamera.updateProjectionMatrix();
+    dopplerRenderer.setSize(width, height);
+}
+
+function updateDopplerRendererSize() {
+    const container = document.getElementById('doppler-3d-container');
+    dopplerRenderer.setSize(container.clientWidth, container.clientHeight);
+    dopplerCamera.aspect = container.clientWidth / container.clientHeight;
+    dopplerCamera.updateProjectionMatrix();
+}
+
+function animateDoppler() {
+    requestAnimationFrame(animateDoppler);
+    dopplerControls.update();
+    dopplerRenderer.render(dopplerScene, dopplerCamera);
+}
+
+function updateDopplerEffect(v) {
+    if (!lightSphere) return;
+    
+    const dopplerFactor = Math.sqrt((1 + v) / (1 - v));
+    const absV = Math.abs(v);
+    
+    // Create color gradient based on velocity
+    if (v > 0) { // Approaching (blueshift)
+        // Blend from white (0) to blue (max velocity)
+        const hue = 0.6; // Blue
+        const saturation = 1;
+        const lightness = 0.8 - (0.3 * absV); // Gets darker as velocity increases
+        lightSphere.material.color.setHSL(hue, saturation, lightness);
+        
+        // Add emission effect for approaching objects
+        lightSphere.material.emissive = new THREE.Color(hue, saturation * 0.7, lightness * 0.5);
+        lightSphere.material.emissiveIntensity = absV * 0.5;
+    } 
+    else if (v < 0) { // Receding (redshift)
+        // Blend from white (0) to red (max velocity)
+        const hue = 0; // Red
+        const saturation = 1;
+        const lightness = 0.8 - (0.3 * absV);
+        lightSphere.material.color.setHSL(hue, saturation, lightness);
+        
+        // Subtler emission for receding objects
+        lightSphere.material.emissive = new THREE.Color(hue, saturation * 0.3, lightness * 0.2);
+        lightSphere.material.emissiveIntensity = absV * 0.3;
+    } 
+    else { // Stationary
+        lightSphere.material.color.setHSL(0, 0, 1); // Pure white
+        lightSphere.material.emissive.setHSL(0, 0, 0);
+        lightSphere.material.emissiveIntensity = 0;
+    }
+    
+    // // Add visual indicator of frequency change
+    // lightSphere.scale.setScalar(1 + (dopplerFactor - 1) * 0.1); // Subtle size change
+    
+    // Update display
+    dopplerVelocityDisplay.textContent = isSIUnits 
+        ? `${(v * C_SI).toExponential(2)} m/s` 
+        : `${v.toFixed(3)}c`;
+}
+
+// Event listener for Doppler slider
+dopplerVelocityInput.addEventListener('input', () => {
+    const v = parseFloat(dopplerVelocityInput.value);
+    updateDopplerEffect(v);
+    if (!globalVelocityInput.isGlobalUpdate) {
+        updateAllVelocities(v);
+    }
+});
+
+// For Length Contraction 3D
+length3DVelocityInput.addEventListener('input', () => {
+    const v = parseFloat(length3DVelocityInput.value);
+    update3DLengthContraction(v);
+    if (!globalVelocityInput.isGlobalUpdate) {
+        updateAllVelocities(v);
+    }
+});
+
+const sphereMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.1,
+    metalness: 0.3,
+    emissive: 0x000000,
+    emissiveIntensity: 0,
+    wireframe: false
+});
+
+const cubeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8B5CF6,
+    roughness: 0.2,
+    metalness: 0.5,
+    transparent: true,
+    opacity: 0.8,
+    wireframe: false,
+    side: THREE.DoubleSide
+});
+
+// Add to both initialization functions
+function addEnhancedLighting(scene) {
+    // Main light
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+    mainLight.position.set(1, 1, 1);
+    scene.add(mainLight);
+    
+    // Fill light
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    fillLight.position.set(-1, -1, -1);
+    scene.add(fillLight);
+    
+    // Ambient light
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    
+    // Optional rim light for better edge definition
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.75);
+    rimLight.position.set(0, 0, 1);
+    scene.add(rimLight);
+}

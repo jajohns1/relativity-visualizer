@@ -180,3 +180,143 @@ canvas {
         margin-right: 2rem; /* space-x-8 */
     }
 }
+
+/* ===================== */
+/* Enhanced Slider Styles */
+/* ===================== */
+
+/* Base Slider Track */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 12px;
+    background: linear-gradient(90deg, #3B82F6 0%, #8B5CF6 100%); /* Blue-to-purple gradient */
+    border-radius: 10px;
+    box-shadow: 
+      inset 0 1px 3px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(59, 130, 246, 0.2);
+    outline: none;
+    transition: background 0.3s ease;
+  }
+  
+  /* Thumb (Handle) */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #FFFFFF;
+    border: 3px solid #8B5CF6; /* Purple border */
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 
+      0 2px 8px rgba(139, 92, 246, 0.5),
+      0 0 0 4px rgba(139, 92, 246, 0.2); /* Glow effect */
+    transition: 
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #FFFFFF;
+    border: 3px solid #8B5CF6;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 
+      0 2px 8px rgba(139, 92, 246, 0.5),
+      0 0 0 4px rgba(139, 92, 246, 0.2);
+  }
+  
+  /* Hover/Active States */
+  input[type="range"]:hover::-webkit-slider-thumb {
+    transform: scale(1.1);
+    box-shadow: 
+      0 3px 10px rgba(139, 92, 246, 0.7),
+      0 0 0 6px rgba(139, 92, 246, 0.1);
+  }
+  
+  input[type="range"]:active::-webkit-slider-thumb {
+    transform: scale(0.95);
+  }
+  
+  /* Focus State (Accessibility) */
+  input[type="range"]:focus {
+    box-shadow: 
+      0 0 0 3px rgba(59, 130, 246, 0.5),
+      inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Tooltip-Like Value Indicator */
+  .slider-group {
+    position: relative;
+  }
+  
+  .slider-group::after {
+    content: attr(data-value);
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E40AF; /* Dark blue */
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+  
+  .slider-group:hover::after {
+    opacity: 1;
+  }
+
+  #3d-plot-container {
+    border: 2px solid #8B5CF6;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  /* Ensure canvas fills container */
+  #3d-plot-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Ensure the new slider matches others */
+  #length-3d-velocity {
+    width: 100%;
+  }
+  
+
+  #doppler-3d-container {
+    border: 2px solid #8B5CF6;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+  }
+  
+  #doppler-3d-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  
+  /* Highlight for blueshift/redshift */
+  .doppler-label {
+    position: absolute;
+    color: white;
+    font-weight: bold;
+    pointer-events: none;
+  }
+
+  #doppler-3d-container, #3d-plot-container {
+    width: 100%;
+    height: 400px;
+    position: relative;
+  }
+  
+  /* Hide child slider thumbs when parent is controlling */
+  .global-control-active input[type="range"]::-webkit-slider-thumb {
+    opacity: 0.5;
+  }

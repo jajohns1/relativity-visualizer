@@ -7,11 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1 class="text-4xl font-extrabold text-center mb-6 glow-text">Special Relativity Visualizer</h1>
+        <h1 class="text-4xl font-extrabold text-center mb-6 glow-text" aria-label="Special Relativity Visualizer">Special Relativity Visualizer</h1>
         <p class="text-center text-lg text-gray-300 mb-8">
             Explore the fascinating effects of special relativity: how time and space change with velocity.
         </p>
@@ -19,36 +21,72 @@
         <div class="global-controls simulation-section bg-gray-700 p-4 rounded-lg shadow-lg flex flex-col md:flex-row items-center justify-around gap-4 mb-8">
             <div class="flex flex-col items-center">
                 <label for="global-velocity" class="text-lg font-medium text-gray-200 mb-2">Global Velocity (v/c):</label>
-                <input type="range" id="global-velocity" min="0" max="0.999" step="0.001" value="0" class="w-full md:w-64">
+                <input 
+                    type="range" 
+                    id="global-velocity" 
+                    min="-0.999" 
+                    max="0.999" 
+                    step="0.001" 
+                    value="0"
+                    aria-label="Adjust global velocity as a fraction of light speed"
+                    aria-valuetext="Current value: 0.000 times light speed"
+                    class="w-full md:w-64"
+                >
                 <span id="global-velocity-display" class="text-xl font-bold text-purple-400 mt-2">0.000c</span>
             </div>
             <div class="flex flex-wrap justify-center gap-2">
-                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.00001">GPS Satellite (0.00001c)</button>
-                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.01">Rocket (0.01c)</button>
-                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.8">Relativistic Jet (0.8c)</button>
-                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.999">Particle Accel. (0.999c)</button>
+                <button 
+                    class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" 
+                    data-velocity="0.00001"
+                    aria-label="Set velocity to 0.00001 times light speed (GPS Satellite)"
+                >GPS Satellite (0.00001c)</button>
+                <button 
+                    class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" 
+                    data-velocity="0.01"
+                    aria-label="Set velocity to 0.01 times light speed (Rocket)"
+                >Rocket (0.01c)</button>
+                <button 
+                    class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" 
+                    data-velocity="0.8"
+                    aria-label="Set velocity to 0.8 times light speed (Relativistic Jet)"
+                >Relativistic Jet (0.8c)</button>
+                <button 
+                    class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" 
+                    data-velocity="0.999"
+                    aria-label="Set velocity to 0.999 times light speed (Particle Accelerator)"
+                >Particle Accel. (0.999c)</button>
             </div>
             <div class="flex flex-col items-center">
                 <label class="inline-flex items-center text-lg font-medium text-gray-200">
-                    <input type="checkbox" id="formula-toggle" class="form-checkbox h-5 w-5 text-purple-600">
+                    <input 
+                        type="checkbox" 
+                        id="formula-toggle" 
+                        class="form-checkbox h-5 w-5 text-purple-600"
+                        aria-label="Toggle formula display"
+                    >
                     <span class="ml-2">Show Formulas</span>
                 </label>
                 <label class="inline-flex items-center text-lg font-medium text-gray-200 mt-2">
-                    <input type="checkbox" id="units-toggle" class="form-checkbox h-5 w-5 text-purple-600">
+                    <input 
+                        type="checkbox" 
+                        id="units-toggle" 
+                        class="form-checkbox h-5 w-5 text-purple-600"
+                        aria-label="Toggle between natural units and SI units"
+                    >
                     <span class="ml-2">SI Units (c=299,792,458 m/s)</span>
                 </label>
             </div>
         </div>
 
 
-        <div id="time-dilation-sim" class="simulation-section">
+        <div id="time-dilation-sim" class="simulation-section" aria-label="Time dilation simulation">
             <h2 class="text-2xl font-bold text-purple-300 mb-4">⏱️ Time Dilation</h2>
             <p class="text-gray-200 mb-4">
                 Observe how a clock moving at high speeds appears to tick slower relative to a stationary observer.
             </p>
             <div class="slider-group">
                 <label for="velocity-time" class="text-lg font-medium">Velocity (v/c):</label>
-                <input type="range" id="velocity-time" min="0" max="0.999" step="0.001" value="0">
+                <input type="range" id="velocity-time" min="-0.999" max="0.999" step="0.001" value="0">
                 <span id="velocity-time-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
             </div>
 
@@ -58,12 +96,12 @@
             </div>
 
             <div class="flex flex-col md:flex-row items-center justify-around space-y-6 md:space-y-0 md:space-x-8 mt-8">
-                <div class="clock stationary-clock">
+                <div class="clock stationary-clock" aria-label="Stationary clock (reference frame)" role="timer">
                     <p class="text-gray-100 text-sm">Stationary Clock ($\Delta t_0$)</p>
                     <p id="stationary-time" class="text-4xl font-bold text-white mt-2">00.00</p>
                     <p class="text-xs text-gray-300">seconds</p>
                 </div>
-                <div class="clock moving-clock">
+                <div class="clock moving-clock" aria-label="Moving clock (time appears slower)" role="timer">
                     <p class="text-gray-100 text-sm">Moving Clock ($\Delta t$)</p>
                     <p id="moving-time" class="text-4xl font-bold text-white mt-2">00.00</p>
                     <p class="text-xs text-gray-300">seconds</p>
@@ -91,7 +129,7 @@
             </p>
             <div class="slider-group">
                 <label for="velocity-length" class="text-lg font-medium">Velocity (v/c):</label>
-                <input type="range" id="velocity-length" min="0" max="0.999" step="0.001" value="0">
+                <input type="range" id="velocity-length" min="-0.999" max="0.999" step="0.001" value="0">
                 <span id="velocity-length-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
             </div>
 
@@ -150,7 +188,7 @@
             </div>
 
 
-            <div id="spacetime-canvas-container" class="mt-8">
+            <div id="spacetime-canvas-container" aria-label="Interactive spacetime diagram. Click to add events." class="mt-8">
                 </div>
             <p class="note">
                 *In the Stationary (x-ct) frame, the grey axes are orthogonal, and the blue axes shear.*<br>
@@ -209,7 +247,7 @@
             </p>
             <div class="display-box mt-4">
                 <span>Traveling Twin Velocity (v/c):</span>
-                <input type="range" id="twin-velocity" min="0" max="0.999" step="0.001" value="0.8">
+                <input type="range" id="twin-velocity" min="-0.999" max="0.999" step="0.001" value="0.8">
                 <span id="twin-velocity-display" class="font-bold text-purple-400 w-24 text-right">0.800c</span>
             </div>
             <div class="display-box mt-2">
@@ -230,6 +268,58 @@
             </div>
         </div>
 
+        <div id="3d-plot-section" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">🌐 3D Relativity Visualization</h2>
+            <p class="text-gray-200 mb-4">
+              Explore how objects contract at relativistic speeds in 3D space.
+            </p>
+
+            <div class="slider-group">
+                <label for="length-3d-velocity" class="text-lg font-medium">Velocity (v/c):</label>
+                <input 
+                  type="range" 
+                  id="length-3d-velocity" 
+                  min="-0.999" 
+                  max="0.999" 
+                  step="0.001" 
+                  value="0"
+                  aria-label="Adjust velocity for 3D length contraction"
+                  class="w-full md:w-64"
+                >
+                <span id="length-3d-velocity-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
+            </div>
+
+           <div id="3d-plot-container" class="w-full h-96 bg-gray-900 rounded-lg"></div>
+        </div>
+
+        <div id="doppler-effect-3d" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">🔴 Relativistic Doppler Effect (3D)</h2>
+            <p class="text-gray-200 mb-4">
+              Observe how light frequency changes with relative motion. Blue = blueshift, Red = redshift.
+            </p>
+            
+            <div class="slider-group">
+              <label for="doppler-velocity" class="text-lg font-medium">Velocity (v/c):</label>
+              <input 
+                type="range" 
+                id="doppler-velocity" 
+                min="-0.999" 
+                max="0.999" 
+                step="0.001" 
+                value="0"
+                aria-label="Adjust velocity for Doppler effect"
+                class="w-full md:w-64"
+              >
+              <span id="doppler-velocity-display" class="text-xl font-bold text-purple-400 w-24 text-right">0.000c</span>
+            </div>
+            
+            <div id="doppler-3d-container" class="w-full h-96 bg-gray-900 rounded-lg mt-4"></div>
+            
+            <div id="doppler-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+              <p class="text-yellow-300">Relativistic Doppler Effect:</p>
+              $$ f_{\text{observed}} = f_{\text{emitted}} \sqrt{\frac{1 + v/c}{1 - v/c}} $$
+            </div>
+          </div>        
 
     </div>
 
