@@ -90,13 +90,14 @@ input[type="range"]::-moz-range-thumb {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
     background-color: rgba(16, 185, 129, 0.8); /* More opaque */
     color: #fff; /* Ensure contrast */
     border-radius: 0.5rem; /* rounded-lg */
     border: 2px solid #A78BFA; /* border-2 border-purple-400 */
     width: 150px;
     height: 100px;
+    padding: 0.5rem;
+    margin: 0.5rem;
     transition: background-color 0.3s ease;
 }
 .stationary-clock {
@@ -331,20 +332,34 @@ input[type="range"] {
   height: 50vh;
 }
 
-.clock {
-    width: 12%;
-    max-height: 100px;
-    height: 10vh;
-  }
-
 @media (max-width: 768px) {
   .simulation-section {
     padding: 1rem;
   }
   .clock {
-    width: 12%;
-    max-height: 10px;
-    max-height: 50px;
-    height: 10vh;
+    width: 80px;
+    height: 60px;
+    padding: 0.25rem;
+  }
+  
+  .clock p {
+    font-size: 0.75rem; /* Smaller text */
+    margin: 0.1rem 0;
+  }
+  
+  #stationary-time, 
+  #moving-time {
+    font-size: 1.5rem; /* Down from 4xl */
   }
 }
+
+@media (max-width: 640px) {
+    .flex-col.md\:flex-row {
+      flex-direction: column !important;
+    }
+    
+    .md\:space-x-8 > * {
+      margin-right: 0 !important;
+      margin-bottom: 1rem;
+    }
+  }
