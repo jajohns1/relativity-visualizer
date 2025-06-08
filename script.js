@@ -764,11 +764,10 @@ const sketch = function (sketch) {
         sketch.pop(); // End of transformed coordinates
     };
 
-    sketch.touchStarted = function() {
-        if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
-            sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
+    sketch.mousePressed = function() {
+        if (sketch.mouseX >= 0 && sketch.mouseX <= sketch.width &&
+            sketch.mouseY >= 0 && sketch.mouseY <= sketch.height) {
             
-            // Convert touch coordinates with unit scaling
             let unitScale = C_norm;
             let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
             let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
@@ -778,31 +777,9 @@ const sketch = function (sketch) {
                 ct: ct_coord_in_units
             });
             sketch.redraw();
-            return false; // Prevent default touch behavior
+            return false;
         }
     };
-    
-    sketch.mouseClicked = function() {
-        if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
-            sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
-    
-            // Convert mouse coordinates with unit scaling
-            let unitScale = C_norm;
-            let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
-            let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
-    
-            events.push({
-                x: x_coord_in_units,
-                ct: ct_coord_in_units
-            });
-            sketch.redraw();
-        }
-    };
-
-    // sketch.touchStarted = function() {
-    //     sketch.mouseClicked();
-    //     return false; // Prevent default
-    // };
 };
 
 // Initialize p5.js sketch when the page loads

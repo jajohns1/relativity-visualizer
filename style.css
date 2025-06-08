@@ -465,7 +465,7 @@ canvas {
     
     /* Larger hit area for spacetime diagram */
     #spacetime-canvas-container {
-        touch-action: none; /* Prevent browser touch gestures */
+        touch-action: manipulation;
         position: relative;
     }
     
