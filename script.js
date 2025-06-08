@@ -1,6 +1,8 @@
 // Constants (speed of light is assumed to be 1 for calculations of v/c by default)
-let C = 1; // Represents speed of light for fractional velocity calculations (c-units)
+const C_norm = 1; // Represents speed of light for fractional velocity calculations (c-units)
 const C_SI = 299792458; // Speed of light in meters per second (SI units)
+
+let C = C_norm
 
 let isSIUnits = false; // Flag to track if SI units are active
 let isFormulasVisible = false;
@@ -24,11 +26,14 @@ function safeParseFloat(value, defaultValue = 0) {
     return isNaN(parsed) ? defaultValue : parsed;
 }
 
-// Robust Lorentz Factor Calculation
+/**
+ * Robust Lorentz Factor Calculation
+ * @param {number} v Velocity of the new frame relative to the original (as v/c).
+ * @returns {{tPrime: number, xPrime: number}} Transformed coordinates.
+ */
 function calculateLorentzFactor(v) {
     try {
-        const effective_v = safeParseFloat(v);
-        const effective_v_over_c = effective_v / C;
+        const effective_v_over_c = safeParseFloat(v);
 
         if (Math.abs(effective_v_over_c) >= 1) {
             console.warn(`Velocity (v=${effective_v}) reaches light speed`);
@@ -94,12 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function lorentzTransform(t, x, v) {
     const gamma = calculateLorentzFactor(v);
-    const v_over_c = isSIUnits ? v / C_SI : v;
+    const v_over_c = v / C;
     
     // Time transformation (include c² term in SI units)
-    const tPrime = gamma * (t - (v_over_c * x) / (isSIUnits ? C_SI : 1));
+    const tPrime = gamma * (t - (v_over_c * x) / C);
     // Space transformation
-    const xPrime = gamma * (x - v_over_c * (isSIUnits ? C_SI * t : t));
+    const xPrime = gamma * (x - v_over_c * (C * t));
     return { tPrime, xPrime };
 }
 
@@ -201,7 +206,7 @@ unitsToggle.addEventListener('change', () => {
         document.querySelector('#contracted-length-display').textContent = `${(originalLength / calculateLorentzFactor(parseFloat(velocityLengthInput.value))).toFixed(2)} meters`;
 
     } else {
-        C = 1;
+        C = C_norm;
         globalVelocityDisplay.textContent = `${parseFloat(globalVelocityInput.value).toFixed(3)}c`;
         velocityTimeDisplay.textContent = `${parseFloat(velocityTimeInput.value).toFixed(3)}c`;
         velocityLengthDisplay.textContent = `${parseFloat(velocityLengthInput.value).toFixed(3)}c`;
@@ -381,7 +386,7 @@ let events = []; // Array to store custom events {x, ct} in stationary frame coo
 const sketch = function (sketch) {
     let scaleFactor = 50;
     let originX, originY;
-    let unitScale = 1; // Add this to handle SI unit scaling
+    let unitScale = C_norm; // Add this to handle SI unit scaling
 
     sketch.setup = function () {
         // Create the canvas inside the specified container
@@ -395,7 +400,7 @@ const sketch = function (sketch) {
         originX = sketch.width / 2;
         originY = sketch.height / 2;
 
-        unitScale = isSIUnits ? 1/C_SI : 1; // Scale down for SI units
+        unitScale = 1/C_norm; // Scale down for SI units
 
         // Adjust scale factor based on canvas size for responsiveness
         scaleFactor = sketch.min(sketch.width, sketch.height) / 5; // Example scaling, ensures content fits
@@ -417,13 +422,13 @@ const sketch = function (sketch) {
         currentSpacetimeVelocity = v_input;
         
         // Calculate effective v/c based on units
-        const effective_v = isSIUnits ? currentSpacetimeVelocity / C_SI : currentSpacetimeVelocity;
+        const effective_v = currentSpacetimeVelocity;
         const gamma = calculateLorentzFactor(currentSpacetimeVelocity);
         
         // Update display - show full velocity in SI units, v/c in natural units
         velocitySpacetimeDisplay.textContent = isSIUnits 
-            ? `${currentSpacetimeVelocity.toExponential(2)} m/s` 
-            : `${effective_v.toFixed(3)}c`;
+            ? `${(currentSpacetimeVelocity * C_SI).toExponential(2)} m/s` 
+            : `${currentSpacetimeVelocity.toFixed(3)}c`;
         lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
 
         sketch.push();
@@ -575,7 +580,7 @@ const sketch = function (sketch) {
                 // x' = gamma(x - vt), t'=gamma(t - vx/c^2)
                 // If t'=0, then t = vx/c^2. Substitute into x'
                 // x' = gamma(x - v(vx/c^2)) = gamma(x - v^2x/c^2) = gamma * x * (1 - v^2/c^2) = gamma * x * (1/gamma^2) = x / gamma
-                const x_at_ct0_in_moving_frame = (1 / gamma) * (isSIUnits ? 1/C_SI : 1);
+                const x_at_ct0_in_moving_frame = (1 / gamma) * (1/C);
 
                 let line_x1 = -canvas_half_width * extend_line_factor;
                 let line_y1 = obj_slope * (line_x1 - x_at_ct0_in_moving_frame * scaleFactor);
@@ -592,12 +597,13 @@ const sketch = function (sketch) {
         sketch.stroke(grid2_color);
         sketch.strokeWeight(0.7);
         for (let coord = -4; coord <= 4; coord++) {
-            let K_val = (coord / gamma) * scaleFactor * (isSIUnits ? C_SI : 1);
+            let K_val = (coord / gamma) * scaleFactor * C_norm;
             
             let grid_line_x1 = -canvas_half_width * extend_line_factor;
             let grid_line_y1 = axis2_slope * grid_line_x1 + K_val;
             let grid_line_x2 = canvas_half_width * extend_line_factor;
             let grid_line_y2 = axis2_slope * grid_line_x2 + K_val;
+
             sketch.line(grid_line_x1, grid_line_y1, grid_line_x2, grid_line_y2);
         }
 
@@ -725,7 +731,7 @@ const sketch = function (sketch) {
             sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
             
             // Convert mouse coordinates with unit scaling
-            let unitScale = isSIUnits ? C_SI : 1;
+            let unitScale = C_norm;
             let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
             let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
     
