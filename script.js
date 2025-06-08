@@ -1,5 +1,8 @@
-// Constants (speed of light is assumed to be 1 for calculations of v/c)
-const C = 1; // Representing speed of light as 1 for fractional velocity calculations
+// Constants (speed of light is assumed to be 1 for calculations of v/c by default)
+let C = 1; // Represents speed of light for fractional velocity calculations (c-units)
+const C_SI = 299792458; // Speed of light in meters per second (SI units)
+
+let isSIUnits = false; // Flag to track if SI units are active
 
 /**
  * Calculates the Lorentz factor (gamma).
@@ -7,10 +10,125 @@ const C = 1; // Representing speed of light as 1 for fractional velocity calcula
  * @returns {number} The Lorentz factor. Returns Infinity if v >= C.
  */
 function calculateLorentzFactor(v) {
-    // gamma is always positive, even for negative v
-    if (Math.abs(v) >= C) return Infinity; // Approaching or reaching light speed
-    return 1 / Math.sqrt(1 - (v * v));
+    // Ensure v is always treated as a fraction of the current C (1 or C_SI)
+    const effective_v_over_c = v / C;
+    if (Math.abs(effective_v_over_c) >= 1) return Infinity; // Approaching or reaching light speed
+    return 1 / Math.sqrt(1 - (effective_v_over_c * effective_v_over_c));
 }
+
+/**
+ * Performs Lorentz Transformation for an event (t, x) to a new frame moving at velocity v.
+ * @param {number} t Time coordinate in original frame.
+ * @param {number} x Space coordinate in original frame.
+ * @param {number} v Velocity of the new frame relative to the original (as v/c).
+ * @returns {{tPrime: number, xPrime: number}} Transformed coordinates.
+ */
+function lorentzTransform(t, x, v) {
+    const gamma = calculateLorentzFactor(v);
+    const tPrime = gamma * (t - (v / C) * x / C); // In c-units, v/C is just v, x/C is x
+    const xPrime = gamma * (x - v * t);
+    return { tPrime, xPrime };
+}
+
+// --- Global Controls ---
+const globalVelocityInput = document.getElementById('global-velocity');
+const globalVelocityDisplay = document.getElementById('global-velocity-display');
+const presetButtons = document.querySelectorAll('.preset-btn');
+const formulaToggle = document.getElementById('formula-toggle');
+const unitsToggle = document.getElementById('units-toggle');
+const formulaDisplays = document.querySelectorAll('.formula-display');
+
+// Event listener for global velocity slider
+globalVelocityInput.addEventListener('input', () => {
+    updateAllVelocities(parseFloat(globalVelocityInput.value));
+});
+
+// Function to update all velocity sliders and displays
+function updateAllVelocities(v) {
+    globalVelocityInput.value = v;
+    globalVelocityDisplay.textContent = `${v.toFixed(3)}c`;
+
+    // Update all section-specific sliders
+    velocityTimeInput.value = v;
+    velocityLengthInput.value = v;
+    velocitySpacetimeInput.value = v; // Spacetime can be negative
+    twinVelocityInput.value = v;
+
+    // Trigger updates for each section
+    updateTimeDilationClocks();
+    updateLengthContraction();
+    // For spacetime, p5.js sketch.draw() handles continuous updates based on velocitySpacetimeInput.value
+    // But we can manually trigger a redraw for immediate visual feedback
+    if (s) s.redraw();
+
+    // Twin paradox update
+    updateTwinParadox();
+}
+
+// Event listeners for preset buttons
+presetButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const velocity = parseFloat(button.dataset.velocity);
+        updateAllVelocities(velocity);
+    });
+});
+
+// Event listener for formula toggle
+formulaToggle.addEventListener('change', () => {
+    isFormulasVisible = formulaToggle.checked;
+    formulaDisplays.forEach(display => {
+        if (isFormulasVisible) {
+            display.classList.remove('hidden');
+        } else {
+            display.classList.add('hidden');
+        }
+        // Re-render MathJax if formulas are shown (needed for initial load or new formulas)
+        if (isFormulasVisible) {
+            MathJax.typesetPromise([display]).catch((err) => console.log('MathJax Error:', err));
+        }
+    });
+});
+
+// Event listener for units toggle
+unitsToggle.addEventListener('change', () => {
+    isSIUnits = unitsToggle.checked;
+    if (isSIUnits) {
+        C = C_SI;
+        // Adjust velocity displays to show actual m/s if desired, or keep as v/c for simplicity
+        // For now, we'll keep v/c for consistency in the input range, but the 'c' will represent C_SI
+        globalVelocityDisplay.textContent = `${(parseFloat(globalVelocityInput.value) * C_SI).toExponential(2)} m/s`;
+        velocityTimeDisplay.textContent = `${(parseFloat(velocityTimeInput.value) * C_SI).toExponential(2)} m/s`;
+        velocityLengthDisplay.textContent = `${(parseFloat(velocityLengthInput.value) * C_SI).toExponential(2)} m/s`;
+        velocitySpacetimeDisplay.textContent = `${(parseFloat(velocitySpacetimeInput.value) * C_SI).toExponential(2)} m/s`;
+        velocityV1Display.textContent = `${(parseFloat(velocityV1Input.value) * C_SI).toExponential(2)} m/s`;
+        velocityV2Display.textContent = `${(parseFloat(velocityV2Input.value) * C_SI).toExponential(2)} m/s`;
+        resultantVelocityDisplay.textContent = `${(parseFloat(resultantVelocityDisplay.textContent) * C_SI).toExponential(2)} m/s`;
+        twinVelocityDisplay.textContent = `${(parseFloat(twinVelocityInput.value) * C_SI).toExponential(2)} m/s`;
+
+        // Update fixed values like "100 units" to meters for length contraction
+        document.querySelector('.ruler-container p').textContent = `Original Length ($L_0$): 100 meters`;
+        document.querySelector('#contracted-length-display').textContent = `${(originalLength / calculateLorentzFactor(parseFloat(velocityLengthInput.value))).toFixed(2)} meters`;
+
+    } else {
+        C = 1;
+        globalVelocityDisplay.textContent = `${parseFloat(globalVelocityInput.value).toFixed(3)}c`;
+        velocityTimeDisplay.textContent = `${parseFloat(velocityTimeInput.value).toFixed(3)}c`;
+        velocityLengthDisplay.textContent = `${parseFloat(velocityLengthInput.value).toFixed(3)}c`;
+        velocitySpacetimeDisplay.textContent = `${parseFloat(velocitySpacetimeInput.value).toFixed(3)}c`;
+        velocityV1Display.textContent = `${parseFloat(velocityV1Input.value).toFixed(3)}c`;
+        velocityV2Display.textContent = `${parseFloat(velocityV2Input.value).toFixed(3)}c`;
+        resultantVelocityDisplay.textContent = `${(parseFloat(resultantVelocityDisplay.textContent.replace(' m/s', '')) / C_SI).toFixed(3)}c`; // Convert back to v/c
+        twinVelocityDisplay.textContent = `${parseFloat(twinVelocityInput.value).toFixed(3)}c`;
+
+        // Update fixed values back to "units"
+        document.querySelector('.ruler-container p').textContent = `Original Length ($L_0$): 100 units`;
+        document.querySelector('#contracted-length-display').textContent = `${(originalLength / calculateLorentzFactor(parseFloat(velocityLengthInput.value))).toFixed(2)} units`;
+    }
+    // Re-render formulas if visible
+    if (isFormulasVisible) {
+        formulaDisplays.forEach(display => MathJax.typesetPromise([display]));
+    }
+});
 
 // --- Time Dilation Logic ---
 const velocityTimeInput = document.getElementById('velocity-time');
@@ -18,35 +136,45 @@ const velocityTimeDisplay = document.getElementById('velocity-time-display');
 const stationaryTimeDisplay = document.getElementById('stationary-time');
 const movingTimeDisplay = document.getElementById('moving-time');
 const lorentzFactorTimeDisplay = document.getElementById('lorentz-factor-time');
+const playPauseTimeBtn = document.getElementById('play-pause-time');
+const resetTimeBtn = document.getElementById('reset-time');
+const stationaryClockParticle = document.querySelector('.stationary-clock');
+const movingClockParticle = document.querySelector('.moving-clock');
 
 let stationaryTime = 0;
 let movingTime = 0;
 let animationFrameId; // To manage the animation loop for time dilation
+let isTimeDilationPlaying = true; // State for play/pause
 
 /**
  * Updates the clocks based on the current velocity for time dilation.
  * Uses requestAnimationFrame for a smooth animation loop.
  */
 function updateTimeDilationClocks() {
+    if (!isTimeDilationPlaying) {
+        return; // Pause animation
+    }
+
     const v = parseFloat(velocityTimeInput.value);
     const gamma = calculateLorentzFactor(v);
 
-    velocityTimeDisplay.textContent = `${v.toFixed(3)}c`;
+    velocityTimeDisplay.textContent = isSIUnits ? `${(v * C_SI).toExponential(2)} m/s` : `${v.toFixed(3)}c`;
     lorentzFactorTimeDisplay.textContent = gamma.toFixed(2);
 
-    // Increment time based on real-time progression
-    // Use a small fixed time step for smooth visual updates, linked to actual time passed
-    // This simulation makes 1 game second roughly 1 real second for stationary clock
     const deltaTime = 0.05; // Time step in "stationary observer" seconds
     stationaryTime += deltaTime;
-    // Moving clock time = Stationary time / gamma
-    // Note: gamma is always >= 1, so moving time always increments slower or equal
     movingTime += deltaTime / gamma;
 
     stationaryTimeDisplay.textContent = stationaryTime.toFixed(2);
     movingTimeDisplay.textContent = movingTime.toFixed(2);
 
-    // Request the next animation frame
+    // Basic "particle" animation within the clocks (using CSS transform)
+    const normalizedTime = (stationaryTime % 10) / 10; // Normalize time to a 0-1 cycle for animation
+    const normalizedMovingTime = (movingTime % 10) / 10;
+
+    // stationaryClockParticle.style.transform = `scaleY(${1 - normalizedTime * 0.5}) translateZ(0)`; // Simple pulse
+    // movingClockParticle.style.transform = `scaleY(${1 - normalizedMovingTime * 0.5}) translateZ(0)`; // Slower pulse
+
     animationFrameId = requestAnimationFrame(updateTimeDilationClocks);
 }
 
@@ -55,15 +183,46 @@ velocityTimeInput.addEventListener('input', () => {
     // Reset clocks when velocity changes to see the effect from start
     stationaryTime = 0;
     movingTime = 0;
-    // Cancel any existing animation frame to restart smoothly
+    // Ensure animation is playing when slider is moved
+    isTimeDilationPlaying = true;
+    playPauseTimeBtn.textContent = 'Pause';
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
     }
-    // Start a new animation loop
     updateTimeDilationClocks();
 });
 
-// Initialize time dilation animation when the page loads
+// Play/Pause button
+playPauseTimeBtn.addEventListener('click', () => {
+    isTimeDilationPlaying = !isTimeDilationPlaying;
+    if (isTimeDilationPlaying) {
+        playPauseTimeBtn.textContent = 'Pause';
+        updateTimeDilationClocks(); // Resume animation
+    } else {
+        playPauseTimeBtn.textContent = 'Play';
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId); // Stop animation
+        }
+    }
+});
+
+// Reset button
+resetTimeBtn.addEventListener('click', () => {
+    stationaryTime = 0;
+    movingTime = 0;
+    stationaryTimeDisplay.textContent = "00.00";
+    movingTimeDisplay.textContent = "00.00";
+    // Pause animation and set button text
+    isTimeDilationPlaying = false;
+    playPauseTimeBtn.textContent = 'Play';
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    stationaryClockParticle.style.transform = `scaleY(1)`; // Reset animation visual
+    movingClockParticle.style.transform = `scaleY(1)`;
+});
+
+// Initial update for time dilation animation when the page loads
 updateTimeDilationClocks();
 
 
@@ -86,9 +245,9 @@ function updateLengthContraction() {
     // Contracted Length = Original Length / gamma
     const contracted = originalLength / gamma;
 
-    velocityLengthDisplay.textContent = `${v.toFixed(3)}c`;
+    velocityLengthDisplay.textContent = isSIUnits ? `${(v * C_SI).toExponential(2)} m/s` : `${v.toFixed(3)}c`;
     lorentzFactorLengthDisplay.textContent = gamma.toFixed(2);
-    contractedLengthDisplay.textContent = contracted.toFixed(2);
+    contractedLengthDisplay.textContent = isSIUnits ? `${contracted.toFixed(2)} meters` : `${contracted.toFixed(2)} units`;
 
     // Visually adjust the ruler's width using CSS transform: scaleX()
     // The ruler starts at 100% width, so scaling by (1 / gamma) will contract it
@@ -107,10 +266,12 @@ const velocitySpacetimeDisplay = document.getElementById('velocity-spacetime-dis
 const lorentzFactorSpacetimeDisplay = document.getElementById('lorentz-factor-spacetime');
 const spacetimeCanvasContainer = document.getElementById('spacetime-canvas-container');
 const frameRadios = document.querySelectorAll('input[name="spacetime-frame"]');
+const clearEventsBtn = document.getElementById('clear-events-btn');
 
 let currentSpacetimeVelocity = 0; // Velocity for the moving observer
 let activeFrame = 'stationary'; // 'stationary' or 'moving'
 let s; // Variable to hold the p5.js instance
+let events = []; // Array to store custom events {x, ct} in stationary frame coordinates
 
 /**
  * The p5.js sketch for the spacetime diagram.
@@ -139,7 +300,9 @@ const sketch = function(sketch) {
             originX = sketch.width / 2;
             originY = sketch.height / 2;
             scaleFactor = sketch.min(sketch.width, sketch.height) / 5;
+            sketch.redraw(); // Request redraw on resize
         };
+        sketch.noLoop(); // Draw only when needed (on velocity change, frame change, or event click)
     };
 
     sketch.draw = function() {
@@ -150,7 +313,7 @@ const sketch = function(sketch) {
         currentSpacetimeVelocity = v_input;
         const gamma = calculateLorentzFactor(currentSpacetimeVelocity);
 
-        velocitySpacetimeDisplay.textContent = `${currentSpacetimeVelocity.toFixed(3)}c`;
+        velocitySpacetimeDisplay.textContent = isSIUnits ? `${(currentSpacetimeVelocity * C_SI).toExponential(2)} m/s` : `${currentSpacetimeVelocity.toFixed(3)}c`;
         lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
 
         sketch.push();
@@ -177,8 +340,9 @@ const sketch = function(sketch) {
 
         let axis1_color, axis2_color; // Colors for primary and secondary axes/grids
         let axis1_label, axis2_label; // Labels for primary and secondary axes
-        let axis1_slope, axis2_slope; // Slopes for the secondary axes relative to primary
-        let grid1_color, grid2_color; // Colors for primary and secondary grids
+        let axis2_slope; // Slope for the secondary x-axis (ct' vs x or ct vs x')
+        let axis1_slope; // Slope for the secondary ct-axis (ct' vs x or ct vs x')
+        let grid1_color, grid2_color, grid3_color; // Colors for primary and secondary grids
 
         let current_v_for_drawing; // Velocity to use for slope calculations
 
@@ -228,14 +392,14 @@ const sketch = function(sketch) {
         sketch.stroke(axis2_color);
         sketch.strokeWeight(1.5);
 
-        // x' or x axis (line ct = v*x, slope = v)
+        // x' or x axis (line ct = slope * x)
         let x_sec_line_x1 = -canvas_half_width * extend_line_factor;
         let x_sec_line_y1 = x_sec_line_x1 * axis2_slope;
         let x_sec_line_x2 = canvas_half_width * extend_line_factor;
         let x_sec_line_y2 = x_sec_line_x2 * axis2_slope;
         sketch.line(x_sec_line_x1, x_sec_line_y1, x_sec_line_x2, x_sec_line_y2);
 
-        // ct' or ct axis (line x = v*ct, or ct = (1/v)*x, slope = 1/v)
+        // ct' or ct axis (line x = slope * ct, or ct = (1/slope)*x)
         if (current_v_for_drawing === 0) {
             // Vertical line when v=0
             sketch.line(0, -canvas_half_height * extend_line_factor, 0, canvas_half_height * extend_line_factor);
@@ -290,14 +454,18 @@ const sketch = function(sketch) {
                 sketch.ellipse(1 * scaleFactor, 0, 10, 10);
             } else {
                 let obj_slope = 1 / (-currentSpacetimeVelocity);
-                let x_prime_at_ct0 = (1 / gamma) * scaleFactor; // x' when ct=0, x=1
+                // To find the x' position of x=1 in the moving frame at ct'=0:
+                // x' = gamma(x - vt), t'=gamma(t - vx/c^2)
+                // If t'=0, then t = vx/c^2. Substitute into x'
+                // x' = gamma(x - v(vx/c^2)) = gamma(x - v^2x/c^2) = gamma * x * (1 - v^2/c^2) = gamma * x * (1/gamma^2) = x / gamma
+                const x_at_ct0_in_moving_frame = 1 / gamma; // x' when original x=1 and ct'=0
                 
                 let line_x1 = -canvas_half_width * extend_line_factor;
-                let line_y1 = obj_slope * (line_x1 - x_prime_at_ct0);
+                let line_y1 = obj_slope * (line_x1 - x_at_ct0_in_moving_frame * scaleFactor);
                 let line_x2 = canvas_half_width * extend_line_factor;
-                let line_y2 = obj_slope * (line_x2 - x_prime_at_ct0);
+                let line_y2 = obj_slope * (line_x2 - x_at_ct0_in_moving_frame * scaleFactor);
                 sketch.line(line_x1, line_y1, line_x2, line_y2);
-                sketch.ellipse(x_prime_at_ct0, 0, 10, 10); // Event at (x'=transformed, ct'=0)
+                sketch.ellipse(x_at_ct0_in_moving_frame * scaleFactor, 0, 10, 10); // Event at (x'=transformed, ct'=0)
             }
         }
 
@@ -353,6 +521,42 @@ const sketch = function(sketch) {
             sketch.line(grid_line_x1, grid_line_y1, grid_line_x2, grid_line_y2);
         }
 
+        // --- Draw Custom Events and their Simultaneity Lines ---
+        events.forEach(event => {
+            sketch.fill(255, 0, 255); // Magenta for events
+            sketch.noStroke();
+            sketch.ellipse(event.x * scaleFactor, event.ct * scaleFactor, 10, 10); // Draw event
+
+            // Draw simultaneity line through the event for the active frame
+            sketch.stroke(192, 132, 252, 150); // Lighter purple for event simultaneity lines
+            sketch.strokeWeight(1.5);
+
+            let event_x_scaled = event.x * scaleFactor;
+            let event_ct_scaled = event.ct * scaleFactor;
+
+            // If activeFrame is 'stationary', draw line of constant ct through event (horizontal)
+            // If activeFrame is 'moving', draw line of constant ct' through event (slope = v)
+            if (activeFrame === 'stationary') {
+                sketch.line(-canvas_half_width, event_ct_scaled, canvas_half_width, event_ct_scaled);
+            } else { // activeFrame === 'moving'
+                // For a given event (t, x) in the stationary frame, find its t' value
+                // t' = gamma(t - vx)
+                const gamma_obs = calculateLorentzFactor(currentSpacetimeVelocity);
+                const event_t_prime = gamma_obs * (event.ct - currentSpacetimeVelocity * event.x); // ct'
+
+                // The equation for a line of constant ct' is: ct = v*x + ct'/gamma
+                // So the intercept on the stationary ct axis is (event_t_prime / gamma_obs)
+                let intercept_on_ct_axis = (event_t_prime / gamma_obs) * scaleFactor; // Convert back to pixels
+
+                // Line has slope 'v' relative to stationary frame x-axis
+                let simult_line_x1 = -canvas_half_width * extend_line_factor;
+                let simult_line_y1 = currentSpacetimeVelocity * simult_line_x1 + intercept_on_ct_axis;
+                let simult_line_x2 = canvas_half_width * extend_line_factor;
+                let simult_line_y2 = currentSpacetimeVelocity * simult_line_x2 + intercept_on_ct_axis;
+                sketch.line(simult_line_x1, simult_line_y1, simult_line_x2, simult_line_y2);
+            }
+        });
+
 
         // --- Axis labels ---
         sketch.fill(255);
@@ -401,37 +605,138 @@ const sketch = function(sketch) {
 
         sketch.pop(); // End of transformed coordinates
     };
+
+    sketch.mouseClicked = function() {
+        // Only add events if click is within canvas bounds
+        if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
+            sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
+            // Convert mouse coordinates (pixels) to spacetime coordinates (units)
+            // Remember the Y-axis flip (scale(1, -1))
+            let x_coord_in_units = (sketch.mouseX - originX) / scaleFactor;
+            let ct_coord_in_units = -(sketch.mouseY - originY) / scaleFactor; // Inverted Y
+
+            events.push({ x: x_coord_in_units, ct: ct_coord_in_units });
+            sketch.redraw(); // Redraw to show the new event
+        }
+    };
 };
 
 // Initialize p5.js sketch when the page loads
 s = new p5(sketch);
 
-// This ensures the p5.js canvas resizes when the window does
-window.addEventListener('resize', () => {
-     if (s && s.windowResized) {
-        s.windowResized();
-     }
-});
-
 // Event listener for velocity slider
 velocitySpacetimeInput.addEventListener('input', () => {
-    // No direct function call needed here for p5.js as it continuously draws in sketch.draw()
-    // The `sketch.draw` function reads `currentSpacetimeVelocity` and updates
-    // the display elements each frame.
-    const v = parseFloat(velocitySpacetimeInput.value);
-    const gamma = calculateLorentzFactor(v);
-    velocitySpacetimeDisplay.textContent = `${v.toFixed(3)}c`;
-    lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
+    // Redraw the canvas to apply new velocity
+    s.redraw();
 });
 
 // Event listener for frame radio buttons
 frameRadios.forEach(radio => {
     radio.addEventListener('change', (event) => {
         activeFrame = event.target.value;
-        // Redraw the canvas to apply the new frame
         s.redraw(); // Request p5.js to redraw immediately
     });
 });
 
+// Clear Events button
+clearEventsBtn.addEventListener('click', () => {
+    events = []; // Clear the events array
+    s.redraw(); // Redraw the canvas
+});
+
 // Initial update for spacetime diagram display
 velocitySpacetimeInput.dispatchEvent(new Event('input'));
+
+
+// --- Relativistic Velocity Addition Logic ---
+const velocityV1Input = document.getElementById('velocity-v1');
+const velocityV1Display = document.getElementById('velocity-v1-display');
+const velocityV2Input = document.getElementById('velocity-v2');
+const velocityV2Display = document.getElementById('velocity-v2-display');
+const resultantVelocityDisplay = document.getElementById('resultant-velocity-display');
+
+/**
+ * Calculates the relativistic velocity addition.
+ * @param {number} v1 Velocity of frame S' relative to S (as v/c).
+ * @param {number} v2 Velocity of object A relative to S' (as v/c).
+ * @returns {number} Velocity of object A relative to S (as v/c).
+ */
+function calculateRelativisticVelocityAddition(v1, v2) {
+    // In c-units, c^2 = 1.
+    const sum = v1 + v2;
+    const denominator = 1 + (v1 * v2);
+    // Ensure denominator isn't zero or too close to zero to prevent Infinity/NaN
+    if (Math.abs(denominator) < 1e-9) {
+        return Math.sign(sum) * C; // Approaching light speed
+    }
+    return sum / denominator;
+}
+
+function updateVelocityAddition() {
+    const v1 = parseFloat(velocityV1Input.value);
+    const v2 = parseFloat(velocityV2Input.value);
+
+    const vTotal = calculateRelativisticVelocityAddition(v1, v2);
+
+    velocityV1Display.textContent = isSIUnits ? `${(v1 * C_SI).toExponential(2)} m/s` : `${v1.toFixed(3)}c`;
+    velocityV2Display.textContent = isSIUnits ? `${(v2 * C_SI).toExponential(2)} m/s` : `${v2.toFixed(3)}c`;
+    resultantVelocityDisplay.textContent = isSIUnits ? `${(vTotal * C_SI).toExponential(2)} m/s` : `${vTotal.toFixed(3)}c`;
+}
+
+// Event listeners for velocity addition sliders
+velocityV1Input.addEventListener('input', updateVelocityAddition);
+velocityV2Input.addEventListener('input', updateVelocityAddition);
+
+// Initial update for velocity addition when page loads
+updateVelocityAddition();
+
+
+// --- Twin Paradox Logic (Conceptual) ---
+const twinVelocityInput = document.getElementById('twin-velocity');
+const twinVelocityDisplay = document.getElementById('twin-velocity-display');
+const earthTimeDisplay = document.getElementById('earth-time-display');
+const travelingTwinTimeDisplay = document.getElementById('traveling-twin-time-display');
+
+const earthBasedTotalTime = 10; // Fixed 10 years for Earth-based time
+
+function updateTwinParadox() {
+    const v_twin = parseFloat(twinVelocityInput.value);
+    const gamma_twin = calculateLorentzFactor(v_twin);
+
+    // Earth-based time is the coordinate time (Delta t)
+    // Traveling twin's time is the proper time (Delta tau)
+    const travelingTwinTime = earthBasedTotalTime / gamma_twin;
+
+    twinVelocityDisplay.textContent = isSIUnits ? `${(v_twin * C_SI).toExponential(2)} m/s` : `${v_twin.toFixed(3)}c`;
+    earthTimeDisplay.textContent = `${earthBasedTotalTime.toFixed(2)} years`;
+    travelingTwinTimeDisplay.textContent = `${travelingTwinTime.toFixed(2)} years`;
+}
+
+// Event listener for twin paradox velocity slider
+twinVelocityInput.addEventListener('input', updateTwinParadox);
+
+// Initial update for twin paradox when page loads
+updateTwinParadox();
+
+
+// --- Initial Global Update ---
+// Ensure all initial displays are correct based on default global velocity
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize formula display state
+    isFormulasVisible = formulaToggle.checked;
+    formulaDisplays.forEach(display => {
+        if (isFormulasVisible) {
+            display.classList.remove('hidden');
+        } else {
+            display.classList.add('hidden');
+        }
+    });
+
+    // Manually trigger updates for all sections on page load
+    // The initial globalVelocityInput.value is 0, so this sets everything to 0c and gamma 1.00
+    updateAllVelocities(parseFloat(globalVelocityInput.value));
+    // Also trigger initial MathJax typesetting for formulas if they are visible
+    if (isFormulasVisible) {
+        formulaDisplays.forEach(display => MathJax.typesetPromise([display]));
+    }
+});

@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Special Relativity Visualizer</title>
-    <!-- Tailwind CSS CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- p5.js library for Spacetime Diagram -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-    <!-- Link to your custom CSS file -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,7 +16,31 @@
             Explore the fascinating effects of special relativity: how time and space change with velocity.
         </p>
 
-        <!-- Time Dilation Section -->
+        <div class="global-controls simulation-section bg-gray-700 p-4 rounded-lg shadow-lg flex flex-col md:flex-row items-center justify-around gap-4 mb-8">
+            <div class="flex flex-col items-center">
+                <label for="global-velocity" class="text-lg font-medium text-gray-200 mb-2">Global Velocity (v/c):</label>
+                <input type="range" id="global-velocity" min="0" max="0.999" step="0.001" value="0" class="w-full md:w-64">
+                <span id="global-velocity-display" class="text-xl font-bold text-purple-400 mt-2">0.000c</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2">
+                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.00001">GPS Satellite (0.00001c)</button>
+                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.01">Rocket (0.01c)</button>
+                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.8">Relativistic Jet (0.8c)</button>
+                <button class="preset-btn bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded" data-velocity="0.999">Particle Accel. (0.999c)</button>
+            </div>
+            <div class="flex flex-col items-center">
+                <label class="inline-flex items-center text-lg font-medium text-gray-200">
+                    <input type="checkbox" id="formula-toggle" class="form-checkbox h-5 w-5 text-purple-600">
+                    <span class="ml-2">Show Formulas</span>
+                </label>
+                <label class="inline-flex items-center text-lg font-medium text-gray-200 mt-2">
+                    <input type="checkbox" id="units-toggle" class="form-checkbox h-5 w-5 text-purple-600">
+                    <span class="ml-2">SI Units (c=299,792,458 m/s)</span>
+                </label>
+            </div>
+        </div>
+
+
         <div id="time-dilation-sim" class="simulation-section">
             <h2 class="text-2xl font-bold text-purple-300 mb-4">⏱️ Time Dilation</h2>
             <p class="text-gray-200 mb-4">
@@ -47,12 +69,21 @@
                     <p class="text-xs text-gray-300">seconds</p>
                 </div>
             </div>
+            <div class="flex justify-center mt-4 space-x-4">
+                <button id="play-pause-time" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Pause</button>
+                <button id="reset-time" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Reset</button>
+            </div>
             <p class="note">
                 *The moving clock's time shown is what a stationary observer would measure for it.*
             </p>
+            <div id="time-dilation-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+                <p class="text-yellow-300">Time Dilation Formula:</p>
+                $$ \Delta t = \frac{\Delta t_0}{\sqrt{1 - v^2/c^2}} = \gamma \Delta t_0 $$
+                <p class="text-yellow-300">Lorentz Factor:</p>
+                $$ \gamma = \frac{1}{\sqrt{1 - v^2/c^2}} $$
+            </div>
         </div>
 
-        <!-- Length Contraction Section -->
         <div id="length-contraction-sim" class="simulation-section">
             <h2 class="text-2xl font-bold text-purple-300 mb-4">📏 Length Contraction</h2>
             <p class="text-gray-200 mb-4">
@@ -82,13 +113,16 @@
             <p class="note">
                 *The length shown is what a stationary observer would measure for the moving object.*
             </p>
+            <div id="length-contraction-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+                <p class="text-yellow-300">Length Contraction Formula:</p>
+                $$ L = L_0 \sqrt{1 - v^2/c^2} = \frac{L_0}{\gamma} $$
+            </div>
         </div>
 
-        <!-- Spacetime Diagram Section -->
         <div id="spacetime-diagram-sim" class="simulation-section">
             <h2 class="text-2xl font-bold text-purple-300 mb-4">🌌 Spacetime Diagram (Minkowski)</h2>
             <p class="text-gray-200 mb-4">
-                Visualize events in spacetime and see how different observers (moving at velocity 'v') perceive coordinates. The time axis (ct) points upwards, and the space axis (x) points rightwards. The light cone represents the path of light.
+                Visualize events in spacetime and see how different observers (moving at velocity 'v') perceive coordinates. The time axis (ct) points upwards, and the space axis (x) points rightwards. The light cone represents the path of light. Click on the diagram to add custom events.
             </p>
             <div class="slider-group">
                 <label for="velocity-spacetime" class="text-lg font-medium">Observer Velocity (v/c):</label>
@@ -111,23 +145,94 @@
                     <span class="ml-2 text-gray-200">Moving (x'-ct')</span>
                 </label>
             </div>
+            <div class="flex items-center justify-center space-x-4 mb-4">
+                <button id="clear-events-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">Clear Events</button>
+            </div>
+
 
             <div id="spacetime-canvas-container" class="mt-8">
-                <!-- p5.js canvas will be injected here -->
-            </div>
+                </div>
             <p class="note">
                 *In the Stationary (x-ct) frame, the grey axes are orthogonal, and the blue axes shear.*<br>
                 *In the Moving (x'-ct') frame, the blue axes are orthogonal, and the grey axes shear.*<br>
                 *The highlighted blue line is the worldline of the moving observer.*
                 *The green lines are simultaneity lines for the currently selected moving frame (x' or x).*
                 *The orange lines are lines of constant position for the currently selected moving frame (x' or x).*
-                *The vertical green line (at x=1 or x'=1) represents a point stationary in its own frame.*
+                *The vertical green line (at x=1 or x'=1) represents a point stationary in its own frame. Its worldline is drawn. If events are added, purple simultaneity lines through them for the active frame will be shown.*
             </p>
+            <div id="spacetime-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+                <p class="text-yellow-300">Lorentz Transformations (Stationary $\rightarrow$ Moving):</p>
+                $$ t' = \gamma (t - vx/c^2) $$
+                $$ x' = \gamma (x - vt) $$
+                <p class="text-yellow-300">Inverse Lorentz Transformations (Moving $\rightarrow$ Stationary):</p>
+                $$ t = \gamma (t' + vx'/c^2) $$
+                $$ x = \gamma (x' + vt') $$
+            </div>
         </div>
+
+        <div id="velocity-addition-sim" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">🚀 Relativistic Velocity Addition</h2>
+            <p class="text-gray-200 mb-4">
+                Calculate the combined velocity of two objects moving relativistically.
+            </p>
+            <div class="flex flex-col md:flex-row items-center justify-around space-y-4 md:space-y-0 md:space-x-8 mt-4">
+                <div class="flex flex-col items-center">
+                    <label for="velocity-v1" class="text-lg font-medium">Velocity v1 (v/c):</label>
+                    <input type="range" id="velocity-v1" min="-0.999" max="0.999" step="0.001" value="0.5" class="w-48">
+                    <span id="velocity-v1-display" class="text-xl font-bold text-purple-400 mt-2">0.500c</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <label for="velocity-v2" class="text-lg font-medium">Velocity v2 (v/c):</label>
+                    <input type="range" id="velocity-v2" min="-0.999" max="0.999" step="0.001" value="0.5" class="w-48">
+                    <span id="velocity-v2-display" class="text-xl font-bold text-purple-400 mt-2">0.500c</span>
+                </div>
+            </div>
+            <div class="display-box mt-6">
+                <span>Resultant Velocity ($v_{total}/c$):</span>
+                <span id="resultant-velocity-display" class="font-bold text-yellow-400">0.000c</span>
+            </div>
+            <p class="note mt-2">
+                *Velocities are relative to a common inertial frame. $v_{total}$ is the velocity of an object moving at $v_2$ relative to a frame that is itself moving at $v_1$ relative to the original frame.*
+            </p>
+            <div id="velocity-addition-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+                <p class="text-yellow-300">Relativistic Velocity Addition Formula:</p>
+                $$ v_{total} = \frac{v_1 + v_2}{1 + \frac{v_1 v_2}{c^2}} $$
+            </div>
+        </div>
+
+        <div id="twin-paradox-sim" class="simulation-section">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">👯 Twin Paradox (Conceptual)</h2>
+            <p class="text-gray-200 mb-4">
+                Explore the classic Twin Paradox scenario. One twin stays on Earth, the other travels at high speed and returns. The traveling twin experiences less time.
+                <br><br>
+                *Note: A full interactive simulation with acceleration phases is complex and beyond the scope of this visualizer's current interactive capabilities. This section provides a conceptual overview.*
+            </p>
+            <div class="display-box mt-4">
+                <span>Traveling Twin Velocity (v/c):</span>
+                <input type="range" id="twin-velocity" min="0" max="0.999" step="0.001" value="0.8">
+                <span id="twin-velocity-display" class="font-bold text-purple-400 w-24 text-right">0.800c</span>
+            </div>
+            <div class="display-box mt-2">
+                <span>Earth-based Time Elapsed:</span>
+                <span id="earth-time-display" class="font-bold text-white">10.00 years</span>
+            </div>
+            <div class="display-box mt-2">
+                <span>Traveling Twin's Time Elapsed:</span>
+                <span id="traveling-twin-time-display" class="font-bold text-yellow-400">6.00 years</span>
+            </div>
+            <p class="note mt-2">
+                *The key to the paradox resolution lies in the traveling twin's acceleration phases (turning around), which breaks the symmetry of the frames.*
+            </p>
+            <div id="twin-paradox-formula" class="formula-display hidden mt-4 p-3 bg-gray-900 rounded-md text-center">
+                <p class="text-yellow-300">Time experienced by Traveling Twin ($\Delta \tau$):</p>
+                $$ \Delta \tau = \Delta t \sqrt{1 - v^2/c^2} = \frac{\Delta t}{\gamma} $$
+                <p class="text-yellow-300">Where $\Delta t$ is the Earth-based time elapsed for the round trip.</p>
+            </div>
+        </div>
+
 
     </div>
 
-    <!-- Link to your custom JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>
