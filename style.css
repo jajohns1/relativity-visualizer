@@ -567,3 +567,19 @@ button, .preset-btn {
     max-height: 100%;
     object-fit: contain;
 }
+
+/* Force canvas sizing */
+#spacetime-canvas-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    #spacetime-canvas-container {
+        -webkit-overflow-scrolling: touch;
+        transform: translateZ(0); /* Force hardware acceleration */
+    }
+}

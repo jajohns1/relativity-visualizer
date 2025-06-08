@@ -427,6 +427,8 @@ const sketch = function (sketch) {
     let unitScale = C_norm; // Add this to handle SI unit scaling
 
     sketch.setup = function () {
+        sketch.pixelDensity(1);
+        
         // Create the canvas inside the specified container
         const canvas = sketch.createCanvas(spacetimeCanvasContainer.offsetWidth, spacetimeCanvasContainer.offsetHeight);
         canvas.parent('spacetime-canvas-container');
