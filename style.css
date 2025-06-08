@@ -331,6 +331,12 @@ input[type="range"] {
   height: 50vh;
 }
 
+.clock {
+    width: 12%;
+    max-height: 100px;
+    height: 10vh;
+  }
+
 @media (max-width: 768px) {
   .simulation-section {
     padding: 1rem;
