@@ -62,6 +62,10 @@ function throttleUpdate(callback, value) {
 document.addEventListener('DOMContentLoaded', () => {
     checkDependencies();
 
+    // Initialize units and formula states FIRST
+    isSIUnits = unitsToggle.checked;
+    isFormulasVisible = formulaToggle.checked;
+
     try {
         // Initialize all components
         updateAllVelocities(safeParseFloat(globalVelocityInput.value));
@@ -90,8 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function lorentzTransform(t, x, v) {
     const gamma = calculateLorentzFactor(v);
-    const tPrime = gamma * (t - (v / C) * x / C); // In c-units, v/C is just v, x/C is x
-    const xPrime = gamma * (x - v * t);
+    const v_over_c = isSIUnits ? v / C_SI : v;
+    
+    // Time transformation (include c² term in SI units)
+    const tPrime = gamma * (t - (v_over_c * x) / (isSIUnits ? C_SI : 1));
+    // Space transformation
+    const xPrime = gamma * (x - v_over_c * (isSIUnits ? C_SI * t : t));
     return { tPrime, xPrime };
 }
 
@@ -112,7 +120,9 @@ globalVelocityInput.addEventListener('input', () => {
 function updateAllVelocities(v) {
     globalVelocityInput.isGlobalUpdate = true;
     globalVelocityInput.value = v;
-    globalVelocityDisplay.textContent = `${v.toFixed(3)}c`;
+    globalVelocityDisplay.textContent = isSIUnits 
+        ? `${(v * C_SI).toExponential(2)} m/s` 
+        : `${v.toFixed(3)}c`;
 
     // Update all section-specific sliders
     velocityTimeInput.value = v;
@@ -341,7 +351,7 @@ function updateLengthContraction() {
 
 // Event listener for length contraction slider
 velocityLengthInput.addEventListener('input', () => {
-    updateLengthContraction
+    updateLengthContraction();
     const v = parseFloat(velocityLengthInput.value);
     if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
         updateAllVelocities(v);
@@ -369,8 +379,9 @@ let events = []; // Array to store custom events {x, ct} in stationary frame coo
  * @param {p5} sketch The p5.js instance.
  */
 const sketch = function (sketch) {
-    let scaleFactor = 50; // Pixels per unit of space/time (ct)
-    let originX, originY; // Center of the canvas
+    let scaleFactor = 50;
+    let originX, originY;
+    let unitScale = 1; // Add this to handle SI unit scaling
 
     sketch.setup = function () {
         // Create the canvas inside the specified container
@@ -383,6 +394,8 @@ const sketch = function (sketch) {
         // Set up initial origin (center of canvas)
         originX = sketch.width / 2;
         originY = sketch.height / 2;
+
+        unitScale = isSIUnits ? 1/C_SI : 1; // Scale down for SI units
 
         // Adjust scale factor based on canvas size for responsiveness
         scaleFactor = sketch.min(sketch.width, sketch.height) / 5; // Example scaling, ensures content fits
@@ -399,12 +412,18 @@ const sketch = function (sketch) {
     sketch.draw = function () {
         sketch.background(40, 40, 60); // Dark background
 
-        // Update velocity and Lorentz factor display
+        // Get the current velocity value
         const v_input = parseFloat(velocitySpacetimeInput.value);
         currentSpacetimeVelocity = v_input;
+        
+        // Calculate effective v/c based on units
+        const effective_v = isSIUnits ? currentSpacetimeVelocity / C_SI : currentSpacetimeVelocity;
         const gamma = calculateLorentzFactor(currentSpacetimeVelocity);
-
-        velocitySpacetimeDisplay.textContent = isSIUnits ? `${(currentSpacetimeVelocity * C_SI).toExponential(2)} m/s` : `${currentSpacetimeVelocity.toFixed(3)}c`;
+        
+        // Update display - show full velocity in SI units, v/c in natural units
+        velocitySpacetimeDisplay.textContent = isSIUnits 
+            ? `${currentSpacetimeVelocity.toExponential(2)} m/s` 
+            : `${effective_v.toFixed(3)}c`;
         lorentzFactorSpacetimeDisplay.textContent = gamma.toFixed(2);
 
         sketch.push();
@@ -448,8 +467,8 @@ const sketch = function (sketch) {
             grid3_color = sketch.color(255, 165, 0, 100); // Orange for constant position
 
             current_v_for_drawing = currentSpacetimeVelocity; // Use actual velocity for shear
-            axis2_slope = current_v_for_drawing; // slope of x' axis in ct vs x is v
-            axis1_slope = 1 / current_v_for_drawing; // slope of ct' axis in ct vs x is 1/v
+            axis2_slope = effective_v; // slope of x' axis in ct vs x is v/c
+            axis1_slope = 1 / effective_v; // slope of ct' axis in ct vs x is c/v
         } else { // activeFrame === 'moving'
             // Moving frame is primary (orthogonal)
             axis1_color = sketch.color(100, 150, 255); // Blue for moving (now orthogonal)
@@ -461,8 +480,13 @@ const sketch = function (sketch) {
             grid3_color = sketch.color(150, 100, 50, 100); // Darker orange for constant position
 
             current_v_for_drawing = -currentSpacetimeVelocity; // Inverse velocity for shear
-            axis2_slope = current_v_for_drawing; // slope of x axis in ct' vs x' is -v
-            axis1_slope = 1 / current_v_for_drawing; // slope of ct axis in ct' vs x' is -1/v
+            axis2_slope = -effective_v; // slope of x axis in ct' vs x' is -v/c
+            axis1_slope = -1 / effective_v; // slope of ct axis in ct' vs x' is -c/v
+        }
+
+        if (isSIUnits) {
+            axis1_label = ["ct (m)", "x (m)"];
+            axis2_label = activeFrame === 'stationary' ? ["ct' (m)", "x' (m)"] : ["ct (m)", "x (m)"];
         }
 
         // --- Draw primary (orthogonal) axes (ct and x or ct' and x') ---
@@ -474,9 +498,11 @@ const sketch = function (sketch) {
         // --- Draw primary (orthogonal) grid lines ---
         sketch.stroke(grid1_color);
         sketch.strokeWeight(0.5);
+
         for (let i = -4; i <= 4; i++) {
-            sketch.line(i * scaleFactor, -canvas_half_height, i * scaleFactor, canvas_half_height); // Vertical lines
-            sketch.line(-canvas_half_width, i * scaleFactor, canvas_half_width, i * scaleFactor); // Horizontal lines
+            let scaledCoord = i * scaleFactor * unitScale;
+            sketch.line(scaledCoord, -canvas_half_height, scaledCoord, canvas_half_height);
+            sketch.line(-canvas_half_width, scaledCoord, canvas_half_width, scaledCoord);
         }
 
         // --- Draw secondary (sheared) axes (ct' and x' or ct and x) ---
@@ -549,7 +575,7 @@ const sketch = function (sketch) {
                 // x' = gamma(x - vt), t'=gamma(t - vx/c^2)
                 // If t'=0, then t = vx/c^2. Substitute into x'
                 // x' = gamma(x - v(vx/c^2)) = gamma(x - v^2x/c^2) = gamma * x * (1 - v^2/c^2) = gamma * x * (1/gamma^2) = x / gamma
-                const x_at_ct0_in_moving_frame = 1 / gamma; // x' when original x=1 and ct'=0
+                const x_at_ct0_in_moving_frame = (1 / gamma) * (isSIUnits ? 1/C_SI : 1);
 
                 let line_x1 = -canvas_half_width * extend_line_factor;
                 let line_y1 = obj_slope * (line_x1 - x_at_ct0_in_moving_frame * scaleFactor);
@@ -566,15 +592,8 @@ const sketch = function (sketch) {
         sketch.stroke(grid2_color);
         sketch.strokeWeight(0.7);
         for (let coord = -4; coord <= 4; coord++) {
-            let K_val; // Intercept on the primary time axis
-            if (activeFrame === 'stationary') { // lines of constant t'
-                // t' = gamma(t - vx) => t = vx + t'/gamma
-                K_val = (coord / gamma) * scaleFactor;
-            } else { // lines of constant t
-                // t = gamma(t' + vx') => t' = -vx' + t/gamma
-                K_val = (coord / gamma) * scaleFactor;
-            }
-
+            let K_val = (coord / gamma) * scaleFactor * (isSIUnits ? C_SI : 1);
+            
             let grid_line_x1 = -canvas_half_width * extend_line_factor;
             let grid_line_y1 = axis2_slope * grid_line_x1 + K_val;
             let grid_line_x2 = canvas_half_width * extend_line_factor;
@@ -616,7 +635,11 @@ const sketch = function (sketch) {
         events.forEach(event => {
             sketch.fill(255, 0, 255); // Magenta for events
             sketch.noStroke();
-            sketch.ellipse(event.x * scaleFactor, event.ct * scaleFactor, 10, 10); // Draw event
+            sketch.ellipse(
+                event.x * scaleFactor * unitScale, 
+                event.ct * scaleFactor * unitScale, 
+                10, 10
+            );
 
             // Draw simultaneity line through the event for the active frame
             sketch.stroke(192, 132, 252, 150); // Lighter purple for event simultaneity lines
@@ -698,16 +721,19 @@ const sketch = function (sketch) {
     };
 
     sketch.mouseClicked = function () {
-        // Only add events if click is within canvas bounds
         if (sketch.mouseX > 0 && sketch.mouseX < sketch.width &&
             sketch.mouseY > 0 && sketch.mouseY < sketch.height) {
-            // Convert mouse coordinates (pixels) to spacetime coordinates (units)
-            // Remember the Y-axis flip (scale(1, -1))
-            let x_coord_in_units = (sketch.mouseX - originX) / scaleFactor;
-            let ct_coord_in_units = -(sketch.mouseY - originY) / scaleFactor; // Inverted Y
-
-            events.push({ x: x_coord_in_units, ct: ct_coord_in_units });
-            sketch.redraw(); // Redraw to show the new event
+            
+            // Convert mouse coordinates with unit scaling
+            let unitScale = isSIUnits ? C_SI : 1;
+            let x_coord_in_units = (sketch.mouseX - originX) / (scaleFactor * unitScale);
+            let ct_coord_in_units = -(sketch.mouseY - originY) / (scaleFactor * unitScale);
+    
+            events.push({ 
+                x: x_coord_in_units, 
+                ct: ct_coord_in_units 
+            });
+            sketch.redraw();
         }
     };
 };
@@ -770,12 +796,17 @@ function calculateRelativisticVelocityAddition(v1, v2) {
 function updateVelocityAddition() {
     const v1 = parseFloat(velocityV1Input.value);
     const v2 = parseFloat(velocityV2Input.value);
-
     const vTotal = calculateRelativisticVelocityAddition(v1, v2);
 
-    velocityV1Display.textContent = isSIUnits ? `${(v1 * C_SI).toExponential(2)} m/s` : `${v1.toFixed(3)}c`;
-    velocityV2Display.textContent = isSIUnits ? `${(v2 * C_SI).toExponential(2)} m/s` : `${v2.toFixed(3)}c`;
-    resultantVelocityDisplay.textContent = isSIUnits ? `${(vTotal * C_SI).toExponential(2)} m/s` : `${vTotal.toFixed(3)}c`;
+    velocityV1Display.textContent = isSIUnits 
+        ? `${(v1 * C_SI).toExponential(2)} m/s` 
+        : `${v1.toFixed(3)}c`;
+    velocityV2Display.textContent = isSIUnits 
+        ? `${(v2 * C_SI).toExponential(2)} m/s` 
+        : `${v2.toFixed(3)}c`;
+    resultantVelocityDisplay.textContent = isSIUnits 
+        ? `${(vTotal * C_SI).toExponential(2)} m/s` 
+        : `${vTotal.toFixed(3)}c`;
 }
 
 // Event listeners for velocity addition sliders
@@ -809,7 +840,7 @@ function updateTwinParadox() {
 
 // Event listener for twin paradox velocity slider
 twinVelocityInput.addEventListener('input', () => {
-    updateTwinParadox
+    updateTwinParadox();
     const v = parseFloat(twinVelocityInput.value);
     if (!globalVelocityInput.isGlobalUpdate) { // Prevent infinite loop
         updateAllVelocities(v);
